@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test de réflexion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  :root{
+    --card-bg:#E7E7E5;
+    --card-border:#5c5c58;
+    --btn-gray:#c7c7c4;
+    --btn-gray-text:#6b6b67;
+    --accent:#FFBA6B;
+    --accent-dark:#e8a04f;
+    --sky:#BFE3F5;
+    --ink:#26261f;
+    --nulle:#adadaa;
+    --mauvaise:#e05252;
+    --mediocre:#ef9d3c;
+    --bonne:#8bc46a;
+    --extra:#2f7d3c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:#ffffff;
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    overflow-x:hidden;
+  }
+  h1,h2,.display{
+    font-family:'Space Grotesk',sans-serif;
+  }
+
+  /* ---------- Carte centrale ---------- */
+  .card{
+    background:var(--card-bg);
+    border:2px solid var(--card-border);
+    border-radius:22px;
+    width:520px;
+    max-width:88vw;
+    min-height:340px;
+    padding:28px 32px 24px;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    box-shadow:0 10px 30px rgba(0,0,0,0.08);
+  }
+  .card h1{
+    text-align:center;
+    font-size:1.5rem;
+    margin:0 0 22px;
+    letter-spacing:0.01em;
+  }
+
+  /* ---------- Formulaire d'inscription ---------- */
+  .field{
+    margin-bottom:16px;
+  }
+  .field label{
+    display:block;
+    font-size:0.85rem;
+    font-weight:600;
+    margin-bottom:6px;
+  }
+  .field label .req{
+    color:#d13b3b;
+    margin-left:2px;
+  }
+  .field input, .field select{
+    width:100%;
+    padding:10px 12px;
+    border-radius:10px;
+    border:1.5px solid #9b9b96;
+    background:#fbfbfa;
+    font-family:'Inter',sans-serif;
+    font-size:0.95rem;
+    color:var(--ink);
+  }
+  .field input:focus, .field select:focus{
+    outline:2px solid var(--accent-dark);
+    outline-offset:1px;
+  }
+
+  .start-row{
+    margin-top:auto;
+    display:flex;
+    justify-content:flex-end;
+    padding-top:10px;
+  }
+  #startBtn{
+    border:none;
+    border-radius:14px;
+    padding:12px 26px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:0.95rem;
+    cursor:not-allowed;
+    background:var(--btn-gray);
+    color:var(--btn-gray-text);
+    transition:background .2s ease, color .2s ease, transform .1s ease;
+  }
+  #startBtn.enabled{
+    background:var(--accent);
+    color:#3a2408;
+    cursor:pointer;
+  }
+  #startBtn.enabled:hover{
+    background:var(--accent-dark);
+  }
+  #startBtn:active.enabled{
+    transform:scale(0.97);
+  }
+
+  /* ---------- Questions logo ---------- */
+  .quiz-progress{
+    text-align:center;
+    font-size:0.75rem;
+    font-weight:600;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:#6b6b67;
+    margin-bottom:14px;
+  }
+  .logo-square{
+    width:150px;
+    height:150px;
+    margin:6px auto 18px;
+    border-radius:12px;
+    border:1.5px solid #4d4d49;
+  }
+  .question-text{
+    text-align:center;
+    font-weight:600;
+    font-size:1.05rem;
+    margin:0 0 20px;
+  }
+  .options{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    align-items:center;
+  }
+  .opt-btn{
+    width:78%;
+    padding:12px 14px;
+    border-radius:12px;
+    border:1.5px solid #8f8f8a;
+    background:var(--btn-gray);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    font-size:0.95rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:background .15s ease, transform .1s ease;
+  }
+  .opt-btn:hover{ background:#b7b7b3; }
+  .opt-btn:active{ transform:scale(0.98); }
+  .opt-btn.correct{ background:var(--bonne); border-color:#3f7a2b; color:#153c0c; }
+  .opt-btn.wrong{ background:var(--mauvaise); border-color:#9c2b2b; color:#4a0f0f; }
+  .opt-btn.disabled{ pointer-events:none; opacity:0.85; }
+
+  /* ---------- Questions couleur ---------- */
+  .color-rect{
+    width:220px;
+    height:120px;
+    margin:6px auto 20px;
+    border-radius:12px;
+    border:1.5px solid #4d4d49;
+  }
+  .color-pick-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    margin-bottom:22px;
+  }
+  .color-pick-row input[type="color"]{
+    width:64px;
+    height:44px;
+    border-radius:10px;
+    border:1.5px solid #8f8f8a;
+    background:none;
+    cursor:pointer;
+    padding:2px;
+  }
+  #validateColorBtn{
+    border:none;
+    border-radius:14px;
+    padding:12px 22px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:0.95rem;
+    cursor:pointer;
+    background:var(--accent);
+    color:#3a2408;
+  }
+  #validateColorBtn:hover{ background:var(--accent-dark); }
+
+  .feedback-flash{
+    text-align:center;
+    font-size:0.85rem;
+    font-weight:600;
+    min-height:1.2em;
+    margin-top:10px;
+    color:#4a7a3a;
+  }
+
+  /* ---------- Panneau Bilan ---------- */
+  .bilan-panel{
+    position:fixed;
+    top:36px;
+    bottom:36px;
+    right:36px;
+    width:220px;
+    border:2px solid #1c1c18;
+    border-radius:20px;
+    background:#ffffff;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .bilan-panel h2{
+    text-align:center;
+    font-size:1.05rem;
+    margin:0;
+    padding:16px 10px 12px;
+    border-bottom:2px solid #1c1c18;
+  }
+  .bilan-list{
+    flex:1;
+    overflow-y:auto;
+    padding:12px 10px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .bilan-empty{
+    font-size:0.8rem;
+    color:#8a8a85;
+    text-align:center;
+    margin-top:20px;
+    padding:0 8px;
+  }
+  .bilan-item{
+    position:relative;
+    background:var(--sky);
+    border-radius:12px;
+    padding:14px 10px 10px;
+    text-align:center;
+    cursor:pointer;
+    font-weight:700;
+    font-family:'Space Grotesk',sans-serif;
+    transition:transform .1s ease;
+  }
+  .bilan-item:hover{ transform:translateY(-2px); }
+  .bilan-item .trash{
+    position:absolute;
+    top:6px;
+    left:8px;
+    cursor:pointer;
+    font-size:0.9rem;
+    line-height:1;
+  }
+  .bilan-item .sub{
+    display:block;
+    font-family:'Inter',sans-serif;
+    font-weight:400;
+    font-size:0.7rem;
+    color:#2b4a5c;
+    margin-top:4px;
+  }
+
+  /* ---------- Overlay recap A4 ---------- */
+  .overlay{
+    position:fixed; inset:0;
+    background:rgba(20,20,18,0.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    padding:20px;
+  }
+  .overlay.show{ display:flex; }
+  .sheet{
+    background:#fff;
+    width:100%;
+    max-width:520px;
+    max-height:88vh;
+    overflow-y:auto;
+    border-radius:10px;
+    padding:34px 36px;
+    position:relative;
+    box-shadow:0 20px 50px rgba(0,0,0,0.35);
+  }
+  .sheet .close-x{
+    position:absolute;
+    top:14px; right:16px;
+    cursor:pointer;
+    font-size:1.1rem;
+    color:#666;
+  }
+  .sheet h2{
+    text-align:center;
+    font-size:1.3rem;
+    margin-bottom:4px;
+  }
+  .sheet .subtitle{
+    text-align:center;
+    font-size:0.8rem;
+    color:#8a8a85;
+    margin-bottom:22px;
+  }
+  .info-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px 18px;
+    font-size:0.9rem;
+    margin-bottom:26px;
+    padding-bottom:20px;
+    border-bottom:1px solid #e2e2df;
+  }
+  .info-grid .label{
+    font-size:0.7rem;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:#8a8a85;
+    display:block;
+  }
+  .result-block{ margin-bottom:20px; }
+  .result-block h3{
+    font-size:0.95rem;
+    margin:0 0 10px;
+  }
+  .badge{
+    display:inline-block;
+    padding:8px 18px;
+    border-radius:12px;
+    font-weight:700;
+    font-family:'Space Grotesk',sans-serif;
+    color:#fff;
+    font-size:0.95rem;
+  }
+  .badge.nulle{ background:var(--nulle); color:#3a3a37; }
+  .badge.mauvaise{ background:var(--mauvaise); }
+  .badge.mediocre{ background:var(--mediocre); }
+  .badge.bonne{ background:var(--bonne); color:#153c0c; }
+  .badge.extra{ background:var(--extra); }
+
+  #downloadPdfBtn{
+    display:block;
+    margin:8px auto 0;
+    border:none;
+    border-radius:14px;
+    padding:11px 22px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    cursor:pointer;
+    background:var(--accent);
+    color:#3a2408;
+  }
+  #downloadPdfBtn:hover{ background:var(--accent-dark); }
+
+  @media (max-width:760px){
+    .bilan-panel{ position:static; width:88vw; max-width:520px; height:220px; margin-top:24px; order:2; }
+    body{ flex-direction:column; padding:24px 0; }
+    .card{ order:1; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="card" id="card"></div>
+
+  <aside class="bilan-panel">
+    <h2>Bilan</h2>
+    <div class="bilan-list" id="bilanList"></div>
+  </aside>
+
+  <div class="overlay" id="overlay">
+    <div class="sheet" id="sheet"></div>
+  </div>
+
+<script>
+/* ===================== Données du test ===================== */
+const LOGO_QUESTIONS = [
+  { gradient: "linear-gradient(to right, #e53935 0%, #e53935 33.33%, #fdd835 33.33%, #fdd835 66.66%, #1e5fbf 66.66%, #1e5fbf 100%)",
+    options: ["Aldi", "Lidl", "Ikea"], answer: "Lidl" },
+  { gradient: "linear-gradient(to right, #d81f26 0%, #d81f26 50%, #141414 50%, #141414 100%)",
+    options: ["Prime Video", "Disney+", "Netflix"], answer: "Netflix" },
+  { gradient: "linear-gradient(to right, #f4d20c 0%, #f4d20c 50%, #367c2b 50%, #367c2b 100%)",
+    options: ["John Deere", "Schneider", "Rizer"], answer: "John Deere" },
+  { gradient: "linear-gradient(to right, #6f4225 0%, #6f4225 25%, #ffffff 25%, #ffffff 50%, #d62300 50%, #d62300 75%, #003087 75%, #003087 100%)",
+    options: ["McDonald's", "Burger King", "O'Tacos"], answer: "Burger King" }
+];
+
+const NUM_COLOR_QUESTIONS = 4;
+
+/* ===================== État ===================== */
+let participant = {};
+let step = 0; // 0 = inscription, 1-4 logos, 5-8 couleurs
+let logoCorrectCount = 0;
+let colorScores = [];
+let currentRandomColor = null;
+
+const card = document.getElementById('card');
+const bilanList = document.getElementById('bilanList');
+const overlay = document.getElementById('overlay');
+const sheet = document.getElementById('sheet');
+
+/* ===================== Rendu inscription ===================== */
+function renderRegistration(){
+  step = 0;
+  card.innerHTML = `
+    <h1>Test de réflexion</h1>
+    <div class="field">
+      <label>Nom<span class="req">*</span></label>
+      <input type="text" id="fNom" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Prénom<span class="req">*</span></label>
+      <input type="text" id="fPrenom" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Date de naissance<span class="req">*</span></label>
+      <input type="date" id="fDate">
+    </div>
+    <div class="field">
+      <label>Genre<span class="req">*</span></label>
+      <select id="fGenre">
+        <option value="" disabled selected>Choisir…</option>
+        <option value="Femme">Femme</option>
+        <option value="Homme">Homme</option>
+        <option value="Autre">Autre</option>
+      </select>
+    </div>
+    <div class="start-row">
+      <button id="startBtn" disabled>Commencer le test</button>
+    </div>
+  `;
+
+  const inputs = ['fNom','fPrenom','fDate','fGenre'].map(id => document.getElementById(id));
+  const startBtn = document.getElementById('startBtn');
+
+  function checkComplete(){
+    const ok = inputs.every(i => i.value.trim() !== '');
+    startBtn.disabled = !ok;
+    startBtn.classList.toggle('enabled', ok);
+  }
+  inputs.forEach(i => i.addEventListener('input', checkComplete));
+  inputs.forEach(i => i.addEventListener('change', checkComplete));
+
+  startBtn.addEventListener('click', () => {
+    if(startBtn.disabled) return;
+    participant = {
+      nom: document.getElementById('fNom').value.trim(),
+      prenom: document.getElementById('fPrenom').value.trim(),
+      date: document.getElementById('fDate').value,
+      genre: document.getElementById('fGenre').value
+    };
+    logoCorrectCount = 0;
+    colorScores = [];
+    step = 1;
+    renderLogoQuestion(0);
+  });
+}
+
+/* ===================== Questions logo (1-4) ===================== */
+function renderLogoQuestion(index){
+  const q = LOGO_QUESTIONS[index];
+  card.innerHTML = `
+    <div class="quiz-progress">Question ${index+1} / 8</div>
+    <div class="logo-square" style="background:${q.gradient}"></div>
+    <p class="question-text">Choisis le nom du logo</p>
+    <div class="options">
+      ${q.options.map((opt,i) => `<button class="opt-btn" data-opt="${i}">${opt}</button>`).join('')}
+    </div>
+    <p class="feedback-flash" id="feedback"></p>
+  `;
+  const buttons = card.querySelectorAll('.opt-btn');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      buttons.forEach(b => b.classList.add('disabled'));
+      const chosen = q.options[btn.dataset.opt];
+      const correct = chosen === q.answer;
+      if(correct){
+        logoCorrectCount++;
+        btn.classList.add('correct');
+        document.getElementById('feedback').textContent = 'Bonne réponse !';
+      } else {
+        btn.classList.add('wrong');
+        buttons.forEach(b => { if(b.textContent === q.answer) b.classList.add('correct'); });
+        document.getElementById('feedback').textContent = 'Pas tout à fait…';
+      }
+      setTimeout(() => {
+        if(index + 1 < LOGO_QUESTIONS.length){
+          renderLogoQuestion(index + 1);
+        } else {
+          renderColorQuestion(0);
+        }
+      }, 700);
+    });
+  });
+}
+
+/* ===================== Questions couleur (5-8) ===================== */
+function randomColor(){
+  const r = Math.floor(Math.random()*256);
+  const g = Math.floor(Math.random()*256);
+  const b = Math.floor(Math.random()*256);
+  return {r,g,b, hex: rgbToHex(r,g,b)};
+}
+function rgbToHex(r,g,b){
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+function hexToRgb(hex){
+  const m = hex.replace('#','');
+  return {
+    r: parseInt(m.substring(0,2),16),
+    g: parseInt(m.substring(2,4),16),
+    b: parseInt(m.substring(4,6),16)
+  };
+}
+function colorCloseness(c1, c2){
+  const dist = Math.sqrt((c1.r-c2.r)**2 + (c1.g-c2.g)**2 + (c1.b-c2.b)**2);
+  const maxDist = Math.sqrt(255**2 * 3);
+  return Math.max(0, 100 * (1 - dist / maxDist));
+}
+
+function renderColorQuestion(index){
+  currentRandomColor = randomColor();
+  card.innerHTML = `
+    <div class="quiz-progress">Question ${index+5} / 8</div>
+    <div class="color-rect" style="background:${currentRandomColor.hex}"></div>
+    <p class="question-text">Trouve la bonne couleur</p>
+    <div class="color-pick-row">
+      <input type="color" id="colorInput" value="#808080">
+      <button id="validateColorBtn">Valider</button>
+    </div>
+    <p class="feedback-flash" id="feedback"></p>
+  `;
+  document.getElementById('validateColorBtn').addEventListener('click', () => {
+    const picked = hexToRgb(document.getElementById('colorInput').value);
+    const score = colorCloseness(currentRandomColor, picked);
+    colorScores.push(score);
+    document.getElementById('feedback').textContent = `Proximité : ${score.toFixed(0)}%`;
+    document.getElementById('validateColorBtn').disabled = true;
+    document.getElementById('colorInput').disabled = true;
+    setTimeout(() => {
+      if(index + 1 < NUM_COLOR_QUESTIONS){
+        renderColorQuestion(index + 1);
+      } else {
+        finishTest();
+      }
+    }, 700);
+  });
+}
+
+/* ===================== Fin du test / bilan ===================== */
+function finishTest(){
+  const avgColor = colorScores.reduce((a,b)=>a+b,0) / colorScores.length;
+  const bilan = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    nom: participant.nom,
+    prenom: participant.prenom,
+    date: participant.date,
+    genre: participant.genre,
+    logoScore: logoCorrectCount,
+    colorScore: avgColor,
+    createdAt: new Date().toISOString()
+  };
+  saveBilan(bilan);
+  renderRegistration();
+  renderBilanList();
+}
+
+/* ===================== Persistance (localStorage) ===================== */
+const STORAGE_KEY = 'reflexion_bilans';
+
+function loadBilans(){
+  try{
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch(e){ return []; }
+}
+function saveBilan(bilan){
+  const list = loadBilans();
+  list.unshift(bilan);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+}
+function deleteBilan(id){
+  const list = loadBilans().filter(b => b.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  renderBilanList();
+}
+
+/* ===================== Rendu du panneau bilan ===================== */
+function renderBilanList(){
+  const list = loadBilans();
+  if(list.length === 0){
+    bilanList.innerHTML = `<p class="bilan-empty">Les résultats du test apparaîtront ici.</p>`;
+    return;
+  }
+  bilanList.innerHTML = list.map(b => `
+    <div class="bilan-item" data-id="${b.id}">
+      <span class="trash" data-del="${b.id}" title="Supprimer">🗑</span>
+      ${escapeHtml(b.prenom)}
+      <span class="sub">${b.date ? formatDate(b.date) : ''}</span>
+    </div>
+  `).join('');
+
+  bilanList.querySelectorAll('.trash').forEach(t => {
+    t.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteBilan(t.dataset.del);
+    });
+  });
+  bilanList.querySelectorAll('.bilan-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const b = loadBilans().find(x => x.id === item.dataset.id);
+      if(b) openSheet(b);
+    });
+  });
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+function formatDate(iso){
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+function calcAge(iso){
+  if(!iso) return '';
+  const birth = new Date(iso);
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const mDiff = now.getMonth() - birth.getMonth();
+  if(mDiff < 0 || (mDiff === 0 && now.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+/* ===================== Récapitulatif A4 ===================== */
+function logoBadge(score){
+  if(score === 0) return {label:'Nulle', cls:'nulle'};
+  if(score === 1) return {label:'Mauvaise', cls:'mauvaise'};
+  if(score === 2) return {label:'Médiocre', cls:'mediocre'};
+  if(score === 3) return {label:'Bonne', cls:'bonne'};
+  return {label:'Extra', cls:'extra'};
+}
+function colorBadge(pct){
+  if(pct < 25) return {label:'Mauvaise', cls:'mauvaise'};
+  if(pct < 50) return {label:'Médiocre', cls:'mediocre'};
+  if(pct < 75) return {label:'Bonne', cls:'bonne'};
+  return {label:'Extra', cls:'extra'};
+}
+
+function openSheet(b){
+  const lb = logoBadge(b.logoScore);
+  const cb = colorBadge(b.colorScore);
+  sheet.innerHTML = `
+    <span class="close-x" id="closeSheet">✕</span>
+    <h2>Récapitulatif</h2>
+    <p class="subtitle">Test de réflexion</p>
+    <div class="info-grid">
+      <div><span class="label">Nom</span>${escapeHtml(b.nom)}</div>
+      <div><span class="label">Prénom</span>${escapeHtml(b.prenom)}</div>
+      <div><span class="label">Date de naissance</span>${b.date ? formatDate(b.date) + ' (' + calcAge(b.date) + ' ans)' : '—'}</div>
+      <div><span class="label">Genre</span>${escapeHtml(b.genre)}</div>
+    </div>
+    <div class="result-block">
+      <h3>Connaissance en logos (moyenne)</h3>
+      <span class="badge ${lb.cls}">${lb.label}</span>
+    </div>
+    <div class="result-block">
+      <h3>Perception des couleurs (moyenne)</h3>
+      <span class="badge ${cb.cls}">${cb.label}</span>
+    </div>
+    <button id="downloadPdfBtn">Télécharger en PDF</button>
+  `;
+  overlay.classList.add('show');
+  document.getElementById('closeSheet').addEventListener('click', () => overlay.classList.remove('show'));
+  document.getElementById('downloadPdfBtn').addEventListener('click', () => {
+    const dlBtn = document.getElementById('downloadPdfBtn');
+    const closeX = document.getElementById('closeSheet');
+    dlBtn.style.display = 'none';
+    closeX.style.display = 'none';
+    html2pdf().set({
+      margin: 10,
+      filename: `bilan_${b.prenom}_${b.nom}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(sheet).save().then(() => {
+      dlBtn.style.display = 'block';
+      closeX.style.display = 'block';
+    });
+  });
+}
+
+overlay.addEventListener('click', (e) => {
+  if(e.target === overlay) overlay.classList.remove('show');
+});
+
+/* ===================== Init ===================== */
+renderRegistration();
+renderBilanList();
+</script>
+</body>
+</html>
+
+
