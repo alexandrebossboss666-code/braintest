@@ -214,6 +214,78 @@
     color:#4a7a3a;
   }
 
+  /* ---------- Questions notes ---------- */
+  .play-wrap{
+    display:flex;
+    justify-content:center;
+    margin:10px auto 22px;
+  }
+  .play-btn{
+    width:0;
+    height:0;
+    border-top:22px solid transparent;
+    border-bottom:22px solid transparent;
+    border-left:36px solid var(--btn-gray);
+    cursor:pointer;
+    transition:border-left-color .15s ease, transform .1s ease;
+  }
+  .play-btn:hover{ border-left-color:#b7b7b3; }
+  .play-btn:active{ transform:scale(0.94); }
+
+  .note-bands{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-bottom:20px;
+  }
+  .note-band{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:#8FC7EC;
+    border:2px solid #1c1c18;
+    border-radius:12px;
+    padding:10px 14px;
+  }
+  .note-band .note-name{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    color:#0f2233;
+    letter-spacing:0.02em;
+  }
+  .note-band .arrows{
+    display:flex;
+    gap:8px;
+  }
+  .note-band .arrows button{
+    border:none;
+    background:#ffffffaa;
+    border-radius:8px;
+    width:26px;
+    height:26px;
+    cursor:pointer;
+    font-size:0.8rem;
+    line-height:1;
+    color:#0f2233;
+  }
+  .note-band .arrows button:hover{ background:#ffffff; }
+  .note-band .arrows button:disabled{ opacity:0.3; cursor:default; }
+
+  #validateOrderBtn{
+    display:block;
+    margin:0 auto;
+    border:none;
+    border-radius:14px;
+    padding:12px 22px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:0.95rem;
+    cursor:pointer;
+    background:var(--accent);
+    color:#3a2408;
+  }
+  #validateOrderBtn:hover{ background:var(--accent-dark); }
+
   /* ---------- Panneau Bilan ---------- */
   .bilan-panel{
     position:fixed;
@@ -404,11 +476,59 @@ const LOGO_QUESTIONS = [
 
 const NUM_COLOR_QUESTIONS = 4;
 
+const NOTES = {
+  'Do':  261.63,
+  'Ré':  293.66,
+  'Mi':  329.63,
+  'Fa':  349.23,
+  'Sol': 392.00,
+  'La':  440.00,
+  'Si':  493.88
+};
+const NOTE_NAMES = Object.keys(NOTES);
+const NUM_NOTE_SINGLE_QUESTIONS = 2;
+const NUM_NOTE_SEQUENCE_QUESTIONS = 2;
+const TOTAL_QUESTIONS = LOGO_QUESTIONS.length + NUM_COLOR_QUESTIONS + NUM_NOTE_SINGLE_QUESTIONS + NUM_NOTE_SEQUENCE_QUESTIONS;
+
+let audioCtx = null;
+function playTone(freq, duration = 0.55){
+  if(!audioCtx){
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  const now = audioCtx.currentTime;
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.28, now + 0.03);
+  gain.gain.linearRampToValueAtTime(0, now + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + duration + 0.02);
+}
+function playSequence(noteNames, gap = 0.65){
+  noteNames.forEach((n, i) => {
+    setTimeout(() => playTone(NOTES[n]), i * gap * 1000);
+  });
+}
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 /* ===================== État ===================== */
 let participant = {};
-let step = 0; // 0 = inscription, 1-4 logos, 5-8 couleurs
+let step = 0; // 0 = inscription, 1-4 logos, 5-8 couleurs, 9-10 notes, 11-12 mélodies
 let logoCorrectCount = 0;
 let colorScores = [];
+let noteCorrectCount = 0;
 let currentRandomColor = null;
 
 const card = document.getElementById('card');
@@ -468,6 +588,7 @@ function renderRegistration(){
     };
     logoCorrectCount = 0;
     colorScores = [];
+    noteCorrectCount = 0;
     step = 1;
     renderLogoQuestion(0);
   });
@@ -477,7 +598,7 @@ function renderRegistration(){
 function renderLogoQuestion(index){
   const q = LOGO_QUESTIONS[index];
   card.innerHTML = `
-    <div class="quiz-progress">Question ${index+1} / 8</div>
+    <div class="quiz-progress">Question ${index+1} / ${TOTAL_QUESTIONS}</div>
     <div class="logo-square" style="background:${q.gradient}"></div>
     <p class="question-text">Choisis le nom du logo</p>
     <div class="options">
@@ -538,7 +659,7 @@ function colorCloseness(c1, c2){
 function renderColorQuestion(index){
   currentRandomColor = randomColor();
   card.innerHTML = `
-    <div class="quiz-progress">Question ${index+5} / 8</div>
+    <div class="quiz-progress">Question ${index+5} / ${TOTAL_QUESTIONS}</div>
     <div class="color-rect" style="background:${currentRandomColor.hex}"></div>
     <p class="question-text">Trouve la bonne couleur</p>
     <div class="color-pick-row">
@@ -558,10 +679,112 @@ function renderColorQuestion(index){
       if(index + 1 < NUM_COLOR_QUESTIONS){
         renderColorQuestion(index + 1);
       } else {
-        finishTest();
+        renderNoteSingleQuestion(0);
       }
     }, 700);
   });
+}
+
+/* ===================== Questions notes simples (9-10) ===================== */
+function renderNoteSingleQuestion(index){
+  const target = NOTE_NAMES[Math.floor(Math.random() * NOTE_NAMES.length)];
+  const distractors = shuffle(NOTE_NAMES.filter(n => n !== target)).slice(0, 2);
+  const options = shuffle([target, ...distractors]);
+
+  card.innerHTML = `
+    <div class="quiz-progress">Question ${LOGO_QUESTIONS.length + NUM_COLOR_QUESTIONS + index + 1} / ${TOTAL_QUESTIONS}</div>
+    <div class="play-wrap"><div class="play-btn" id="playBtn" role="button" aria-label="Écouter la note"></div></div>
+    <p class="question-text">Quelle note viens-tu d'entendre ?</p>
+    <div class="options">
+      ${options.map((opt,i) => `<button class="opt-btn" data-opt="${i}">${opt}</button>`).join('')}
+    </div>
+    <p class="feedback-flash" id="feedback"></p>
+  `;
+
+  document.getElementById('playBtn').addEventListener('click', () => playTone(NOTES[target]));
+
+  const buttons = card.querySelectorAll('.opt-btn');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      buttons.forEach(b => b.classList.add('disabled'));
+      const chosen = options[btn.dataset.opt];
+      const correct = chosen === target;
+      if(correct){
+        noteCorrectCount++;
+        btn.classList.add('correct');
+        document.getElementById('feedback').textContent = 'Bonne réponse !';
+      } else {
+        btn.classList.add('wrong');
+        buttons.forEach(b => { if(b.textContent === target) b.classList.add('correct'); });
+        document.getElementById('feedback').textContent = 'Pas tout à fait…';
+      }
+      setTimeout(() => {
+        if(index + 1 < NUM_NOTE_SINGLE_QUESTIONS){
+          renderNoteSingleQuestion(index + 1);
+        } else {
+          renderNoteSequenceQuestion(0);
+        }
+      }, 700);
+    });
+  });
+}
+
+/* ===================== Questions mélodie (11-12) ===================== */
+function renderNoteSequenceQuestion(index){
+  const targetSequence = shuffle(NOTE_NAMES).slice(0, 4);
+  let bandOrder = shuffle(targetSequence);
+  while(bandOrder.join() === targetSequence.join()){
+    bandOrder = shuffle(targetSequence);
+  }
+
+  function draw(){
+    card.innerHTML = `
+      <div class="quiz-progress">Question ${LOGO_QUESTIONS.length + NUM_COLOR_QUESTIONS + NUM_NOTE_SINGLE_QUESTIONS + index + 1} / ${TOTAL_QUESTIONS}</div>
+      <div class="play-wrap"><div class="play-btn" id="playBtn" role="button" aria-label="Écouter la mélodie"></div></div>
+      <p class="question-text">Remets les notes dans le bon ordre</p>
+      <div class="note-bands" id="bandsWrap">
+        ${bandOrder.map((n,i) => `
+          <div class="note-band" data-note="${n}">
+            <span class="note-name">${n}</span>
+            <span class="arrows">
+              <button data-dir="up" data-idx="${i}" ${i===0 ? 'disabled' : ''}>▲</button>
+              <button data-dir="down" data-idx="${i}" ${i===bandOrder.length-1 ? 'disabled' : ''}>▼</button>
+            </span>
+          </div>
+        `).join('')}
+      </div>
+      <button id="validateOrderBtn">Valider</button>
+      <p class="feedback-flash" id="feedback"></p>
+    `;
+    document.getElementById('playBtn').addEventListener('click', () => playSequence(targetSequence));
+    card.querySelectorAll('.arrows button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = parseInt(btn.dataset.idx, 10);
+        const j = btn.dataset.dir === 'up' ? i - 1 : i + 1;
+        [bandOrder[i], bandOrder[j]] = [bandOrder[j], bandOrder[i]];
+        draw();
+      });
+    });
+    document.getElementById('validateOrderBtn').addEventListener('click', () => {
+      const correct = bandOrder.join() === targetSequence.join();
+      if(correct){
+        noteCorrectCount++;
+        document.getElementById('feedback').textContent = 'Bon ordre !';
+      } else {
+        document.getElementById('feedback').textContent = `Pas tout à fait… l'ordre était : ${targetSequence.join(' - ')}`;
+      }
+      document.getElementById('validateOrderBtn').disabled = true;
+      card.querySelectorAll('.arrows button').forEach(b => b.disabled = true);
+      setTimeout(() => {
+        if(index + 1 < NUM_NOTE_SEQUENCE_QUESTIONS){
+          renderNoteSequenceQuestion(index + 1);
+        } else {
+          finishTest();
+        }
+      }, 1400);
+    });
+  }
+  draw();
 }
 
 /* ===================== Fin du test / bilan ===================== */
@@ -575,6 +798,7 @@ function finishTest(){
     genre: participant.genre,
     logoScore: logoCorrectCount,
     colorScore: avgColor,
+    noteScore: noteCorrectCount,
     createdAt: new Date().toISOString()
   };
   saveBilan(bilan);
@@ -667,6 +891,7 @@ function colorBadge(pct){
 function openSheet(b){
   const lb = logoBadge(b.logoScore);
   const cb = colorBadge(b.colorScore);
+  const nb = typeof b.noteScore === 'number' ? logoBadge(b.noteScore) : null;
   sheet.innerHTML = `
     <span class="close-x" id="closeSheet">✕</span>
     <h2>Récapitulatif</h2>
@@ -685,6 +910,11 @@ function openSheet(b){
       <h3>Perception des couleurs (moyenne)</h3>
       <span class="badge ${cb.cls}">${cb.label}</span>
     </div>
+    ${nb ? `
+    <div class="result-block">
+      <h3>Capacité à reconnaître les notes</h3>
+      <span class="badge ${nb.cls}">${nb.label}</span>
+    </div>` : ''}
     <button id="downloadPdfBtn">Télécharger en PDF</button>
   `;
   overlay.classList.add('show');
@@ -717,5 +947,3 @@ renderBilanList();
 </script>
 </body>
 </html>
-
-
