@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --card-bg:#E7E7E5;
@@ -286,19 +287,26 @@
   }
   #validateOrderBtn:hover{ background:var(--accent-dark); }
 
-  /* ---------- Panneau Bilan ---------- */
-  .bilan-panel{
+  /* ---------- Colonne Bilan (droite) ---------- */
+  .bilan-column{
     position:fixed;
-    top:36px;
-    bottom:36px;
+    top:0;
+    bottom:0;
     right:36px;
     width:220px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:16px;
+  }
+  .bilan-panel{
     border:2px solid #1c1c18;
     border-radius:20px;
     background:#ffffff;
     display:flex;
     flex-direction:column;
     overflow:hidden;
+    max-height:320px;
   }
   .bilan-panel h2{
     text-align:center;
@@ -308,7 +316,6 @@
     border-bottom:2px solid #1c1c18;
   }
   .bilan-list{
-    flex:1;
     overflow-y:auto;
     padding:12px 10px;
     display:flex;
@@ -320,7 +327,7 @@
     color:#8a8a85;
     text-align:center;
     margin-top:20px;
-    padding:0 8px;
+    padding:0 8px 20px;
   }
   .bilan-item{
     position:relative;
@@ -349,7 +356,64 @@
     font-size:0.7rem;
     color:#2b4a5c;
     margin-top:4px;
+    letter-spacing:0.05em;
   }
+
+  /* ---------- Recherche par code ---------- */
+  .bilan-search-box{
+    border:2px solid #1c1c18;
+    border-radius:20px;
+    background:#ffffff;
+    padding:14px 14px 16px;
+  }
+  .bilan-search-box label{
+    display:block;
+    font-size:0.78rem;
+    font-weight:600;
+    text-align:center;
+    margin-bottom:10px;
+    line-height:1.25;
+  }
+  .bilan-search-box input{
+    width:100%;
+    padding:9px 10px;
+    border-radius:10px;
+    border:1.5px solid #9b9b96;
+    background:#fbfbfa;
+    font-family:'Inter',sans-serif;
+    font-size:0.9rem;
+    text-align:center;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    margin-bottom:10px;
+  }
+  .bilan-search-box input:focus{
+    outline:2px solid var(--accent-dark);
+    outline-offset:1px;
+  }
+  #findCodeBtn{
+    width:100%;
+    border:none;
+    border-radius:12px;
+    padding:9px 10px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:0.88rem;
+    cursor:pointer;
+    background:var(--accent);
+    color:#3a2408;
+  }
+  #findCodeBtn:hover{ background:var(--accent-dark); }
+  .code-msg{
+    text-align:center;
+    font-size:0.78rem;
+    font-weight:600;
+    margin:10px 0 0;
+    min-height:1.1em;
+  }
+  .code-msg.error{ color:#c0342c; }
+  .code-msg.info{ color:#3a6ea5; }
+  .code-msg.success{ color:#3f7a2b; }
 
   /* ---------- Overlay recap A4 ---------- */
   .overlay{
@@ -442,7 +506,8 @@
   #downloadPdfBtn:hover{ background:var(--accent-dark); }
 
   @media (max-width:760px){
-    .bilan-panel{ position:static; width:88vw; max-width:520px; height:220px; margin-top:24px; order:2; }
+    .bilan-column{ position:static; width:88vw; max-width:520px; margin-top:24px; order:2; }
+    .bilan-panel{ max-height:220px; }
     body{ flex-direction:column; padding:24px 0; }
     .card{ order:1; }
   }
@@ -452,10 +517,18 @@
 
   <div class="card" id="card"></div>
 
-  <aside class="bilan-panel">
-    <h2>Bilan</h2>
-    <div class="bilan-list" id="bilanList"></div>
-  </aside>
+  <div class="bilan-column">
+    <aside class="bilan-panel">
+      <h2>Bilan</h2>
+      <div class="bilan-list" id="bilanList"></div>
+    </aside>
+    <div class="bilan-search-box">
+      <label for="codeInput">Trouver mon bilan avec mon code bilan</label>
+      <input type="text" id="codeInput" placeholder="Ex : 7K2P9X" maxlength="10">
+      <button id="findCodeBtn">Rechercher</button>
+      <p class="code-msg" id="codeMsg"></p>
+    </div>
+  </div>
 
   <div class="overlay" id="overlay">
     <div class="sheet" id="sheet"></div>
@@ -521,6 +594,33 @@ function shuffle(arr){
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+/* ===================== Supabase ===================== */
+const SUPABASE_URL = 'https://alrcdwhyrgqqrfyxqklg.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_AXSZBIjcBZbAVosgFccfYQ_dUVhaXa0';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // sans O/0, I/1 pour éviter la confusion
+function generateCode(len = 6){
+  let code = '';
+  for(let i = 0; i < len; i++){
+    code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  }
+  return code;
+}
+function mapRowToBilan(row){
+  return {
+    code: row.code,
+    nom: row.nom,
+    prenom: row.prenom,
+    date: row.date_naissance,
+    genre: row.genre,
+    logoScore: row.logo_score,
+    colorScore: row.color_score,
+    noteScore: row.note_score,
+    createdAt: row.created_at
+  };
 }
 
 /* ===================== État ===================== */
@@ -788,10 +888,11 @@ function renderNoteSequenceQuestion(index){
 }
 
 /* ===================== Fin du test / bilan ===================== */
-function finishTest(){
+async function finishTest(){
   const avgColor = colorScores.reduce((a,b)=>a+b,0) / colorScores.length;
+  const code = generateCode();
   const bilan = {
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    code,
     nom: participant.nom,
     prenom: participant.prenom,
     date: participant.date,
@@ -801,54 +902,146 @@ function finishTest(){
     noteScore: noteCorrectCount,
     createdAt: new Date().toISOString()
   };
-  saveBilan(bilan);
+
+  let saveError = false;
+  let saveErrorDetail = '';
+  try{
+    const { error } = await sb.from('bilans').insert([{
+      code: bilan.code,
+      nom: bilan.nom,
+      prenom: bilan.prenom,
+      date_naissance: bilan.date || null,
+      genre: bilan.genre,
+      logo_score: bilan.logoScore,
+      color_score: bilan.colorScore,
+      note_score: bilan.noteScore
+    }]);
+    if(error){
+      saveError = true;
+      saveErrorDetail = error.message || JSON.stringify(error);
+      console.error(error);
+    }
+  } catch(e){
+    saveError = true;
+    saveErrorDetail = e.message || String(e);
+    console.error(e);
+  }
+
+  addLocalBilan(bilan);
   renderRegistration();
   renderBilanList();
+  showCodeModal(bilan, saveError, saveErrorDetail);
 }
 
-/* ===================== Persistance (localStorage) ===================== */
-const STORAGE_KEY = 'reflexion_bilans';
+/* ===================== Cache local des bilans consultés sur cet appareil ===================== */
+const STORAGE_KEY = 'reflexion_bilans_cache';
 
-function loadBilans(){
+function loadLocalBilans(){
   try{
     return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
   } catch(e){ return []; }
 }
-function saveBilan(bilan){
-  const list = loadBilans();
-  list.unshift(bilan);
+function saveLocalBilans(list){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
 }
-function deleteBilan(id){
-  const list = loadBilans().filter(b => b.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+function addLocalBilan(bilan){
+  const list = loadLocalBilans().filter(b => b.code !== bilan.code);
+  list.unshift(bilan);
+  saveLocalBilans(list);
+}
+function removeLocalBilan(code){
+  const list = loadLocalBilans().filter(b => b.code !== code);
+  saveLocalBilans(list);
   renderBilanList();
+}
+
+/* ===================== Recherche d'un bilan par code ===================== */
+async function handleFindCode(){
+  const input = document.getElementById('codeInput');
+  const msg = document.getElementById('codeMsg');
+  const code = input.value.trim().toUpperCase();
+  msg.className = 'code-msg';
+  msg.textContent = '';
+  if(!code) return;
+
+  if(loadLocalBilans().some(b => b.code === code)){
+    msg.textContent = 'Vous avez déjà votre bilan.';
+    msg.classList.add('info');
+    return;
+  }
+
+  msg.textContent = 'Recherche…';
+  try{
+    const { data, error } = await sb.from('bilans').select('*').eq('code', code).maybeSingle();
+    if(error){
+      msg.textContent = 'Erreur : ' + (error.message || 'inconnue');
+      msg.classList.add('error');
+      console.error(error);
+      return;
+    }
+    if(!data){
+      msg.textContent = 'Code introuvable';
+      msg.classList.add('error');
+      return;
+    }
+    const bilan = mapRowToBilan(data);
+    addLocalBilan(bilan);
+    renderBilanList();
+    msg.textContent = 'Bilan retrouvé !';
+    msg.classList.add('success');
+    input.value = '';
+  } catch(e){
+    msg.textContent = 'Erreur de connexion, réessaie.';
+    msg.classList.add('error');
+  }
+}
+document.getElementById('findCodeBtn').addEventListener('click', handleFindCode);
+document.getElementById('codeInput').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') handleFindCode();
+});
+
+/* ===================== Modale : code bilan à conserver ===================== */
+function showCodeModal(bilan, saveError, saveErrorDetail){
+  sheet.innerHTML = `
+    <span class="close-x" id="closeSheet">✕</span>
+    <h2>Bilan enregistré</h2>
+    <p class="subtitle">Merci ${escapeHtml(bilan.prenom)} !</p>
+    <p style="text-align:center;font-size:0.92rem;margin-bottom:14px;">
+      Ton code bilan (à conserver pour le retrouver depuis un autre appareil) :
+    </p>
+    <p style="text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.7rem;letter-spacing:0.18em;background:#f2f2ef;border-radius:12px;padding:16px;margin-bottom:${saveError ? '14px' : '0'};">
+      ${bilan.code}
+    </p>
+    ${saveError ? `<p style="text-align:center;font-size:0.8rem;color:#c0342c;">La sauvegarde en ligne a échoué : ${escapeHtml(saveErrorDetail || 'raison inconnue')}</p>` : ''}
+  `;
+  overlay.classList.add('show');
+  document.getElementById('closeSheet').addEventListener('click', () => overlay.classList.remove('show'));
 }
 
 /* ===================== Rendu du panneau bilan ===================== */
 function renderBilanList(){
-  const list = loadBilans();
+  const list = loadLocalBilans();
   if(list.length === 0){
     bilanList.innerHTML = `<p class="bilan-empty">Les résultats du test apparaîtront ici.</p>`;
     return;
   }
   bilanList.innerHTML = list.map(b => `
-    <div class="bilan-item" data-id="${b.id}">
-      <span class="trash" data-del="${b.id}" title="Supprimer">🗑</span>
+    <div class="bilan-item" data-code="${b.code}">
+      <span class="trash" data-del="${b.code}" title="Supprimer">🗑</span>
       ${escapeHtml(b.prenom)}
-      <span class="sub">${b.date ? formatDate(b.date) : ''}</span>
+      <span class="sub">${escapeHtml(b.code)}</span>
     </div>
   `).join('');
 
   bilanList.querySelectorAll('.trash').forEach(t => {
     t.addEventListener('click', (e) => {
       e.stopPropagation();
-      deleteBilan(t.dataset.del);
+      removeLocalBilan(t.dataset.del);
     });
   });
   bilanList.querySelectorAll('.bilan-item').forEach(item => {
     item.addEventListener('click', () => {
-      const b = loadBilans().find(x => x.id === item.dataset.id);
+      const b = loadLocalBilans().find(x => x.code === item.dataset.code);
       if(b) openSheet(b);
     });
   });
@@ -901,6 +1094,7 @@ function openSheet(b){
       <div><span class="label">Prénom</span>${escapeHtml(b.prenom)}</div>
       <div><span class="label">Date de naissance</span>${b.date ? formatDate(b.date) + ' (' + calcAge(b.date) + ' ans)' : '—'}</div>
       <div><span class="label">Genre</span>${escapeHtml(b.genre)}</div>
+      <div><span class="label">Code bilan</span>${escapeHtml(b.code)}</div>
     </div>
     <div class="result-block">
       <h3>Connaissance en logos (moyenne)</h3>
