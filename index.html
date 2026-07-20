@@ -415,6 +415,91 @@
   .code-msg.info{ color:#3a6ea5; }
   .code-msg.success{ color:#3f7a2b; }
 
+  /* ---------- Verrou de maintenance ---------- */
+  .card-wrap{ position:relative; }
+  .bilan-search-box{ position:relative; }
+  .locked-overlay{
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+    background:rgba(231,231,229,0.6);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    z-index:6;
+  }
+  .lock-icon{ position:relative; width:44px; height:52px; }
+  .lock-icon .shackle{
+    position:absolute; top:0; left:8px;
+    width:28px; height:24px;
+    border:6px solid #c0342c;
+    border-bottom:none;
+    border-radius:15px 15px 0 0;
+    box-sizing:border-box;
+  }
+  .lock-icon .body{
+    position:absolute; bottom:0; left:0;
+    width:44px; height:29px;
+    background:#c0342c;
+    border-radius:7px;
+  }
+  .lock-icon .hole{
+    position:absolute; top:8px; left:50%;
+    transform:translateX(-50%);
+    width:7px; height:7px;
+    background:#fdf1f0;
+    border-radius:50%;
+  }
+  .lock-icon .hole::after{
+    content:'';
+    position:absolute; top:5px; left:50%;
+    transform:translateX(-50%);
+    width:3px; height:7px;
+    background:#fdf1f0;
+  }
+  .lock-tooltip{
+    position:absolute;
+    bottom:105%; left:50%;
+    transform:translateX(-50%);
+    background:#2a1414;
+    color:#fff;
+    padding:10px 14px;
+    border-radius:10px;
+    font-size:0.76rem;
+    font-weight:600;
+    width:210px;
+    text-align:center;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .15s ease;
+    z-index:10;
+  }
+  .lock-tooltip::after{
+    content:'';
+    position:absolute; top:100%; left:50%;
+    transform:translateX(-50%);
+    border:6px solid transparent;
+    border-top-color:#2a1414;
+  }
+  .lock-tooltip.show{ opacity:1; }
+
+  #maintenanceBanner{
+    position:fixed;
+    top:0; left:0; right:0;
+    background:#c0342c;
+    color:#fff;
+    text-align:center;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:1.15rem;
+    padding:16px 12px;
+    letter-spacing:0.01em;
+    z-index:20;
+  }
+
   /* ---------- Overlay recap A4 ---------- */
   .overlay{
     position:fixed; inset:0;
@@ -515,7 +600,9 @@
 </head>
 <body>
 
-  <div class="card" id="card"></div>
+  <div class="card-wrap" id="cardWrap">
+    <div class="card" id="card"></div>
+  </div>
 
   <div class="bilan-column">
     <aside class="bilan-panel">
@@ -1135,9 +1222,40 @@ overlay.addEventListener('click', (e) => {
   if(e.target === overlay) overlay.classList.remove('show');
 });
 
+/* ===================== Verrou de maintenance ===================== */
+function lockOverlayHTML(id, msg){
+  return `<div class="locked-overlay" id="${id}">
+    <div class="lock-icon"><div class="shackle"></div><div class="body"><div class="hole"></div></div></div>
+    <div class="lock-tooltip" id="${id}Tip">${msg}</div>
+  </div>`;
+}
+function wireLock(id, msg, container){
+  container.insertAdjacentHTML('beforeend', lockOverlayHTML(id, msg));
+  document.getElementById(id).addEventListener('click', () => {
+    const tip = document.getElementById(id + 'Tip');
+    tip.classList.add('show');
+    setTimeout(() => tip.classList.remove('show'), 2500);
+  });
+}
+async function checkMaintenance(){
+  try{
+    const { data, error } = await sb.from('settings').select('maintenance').eq('id', 1).maybeSingle();
+    if(error || !data || !data.maintenance) return;
+    wireLock('lockCard', 'Test indisponible pour le moment, veuillez patienter.', document.getElementById('cardWrap'));
+    const banner = document.createElement('div');
+    banner.id = 'maintenanceBanner';
+    banner.textContent = 'Test non accessible pour le moment';
+    document.body.prepend(banner);
+    document.body.style.paddingTop = '64px';
+  } catch(e){
+    console.error(e);
+  }
+}
+
 /* ===================== Init ===================== */
 renderRegistration();
 renderBilanList();
+checkMaintenance();
 </script>
 </body>
 </html>
