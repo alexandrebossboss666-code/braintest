@@ -500,6 +500,64 @@
     z-index:20;
   }
 
+  /* ---------- Boîte avis (bas gauche) ---------- */
+  .avis-box{
+    position:fixed;
+    left:36px;
+    bottom:36px;
+    width:240px;
+    border:2px solid #1c1c18;
+    border-radius:20px;
+    background:#ffffff;
+    padding:16px 16px 18px;
+  }
+  .avis-box h2{
+    font-size:0.95rem;
+    text-align:center;
+    margin:0 0 10px;
+  }
+  .avis-box textarea{
+    width:100%;
+    min-height:80px;
+    resize:vertical;
+    border-radius:10px;
+    border:1.5px solid #9b9b96;
+    background:#fbfbfa;
+    font-family:'Inter',sans-serif;
+    font-size:0.85rem;
+    padding:8px 10px;
+    margin-bottom:10px;
+  }
+  .avis-box textarea:focus{
+    outline:2px solid var(--accent-dark);
+    outline-offset:1px;
+  }
+  #sendAvisBtn{
+    width:100%;
+    border:none;
+    border-radius:12px;
+    padding:9px 10px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:0.88rem;
+    cursor:pointer;
+    background:var(--accent);
+    color:#3a2408;
+  }
+  #sendAvisBtn:hover{ background:var(--accent-dark); }
+  .avis-msg{
+    text-align:center;
+    font-size:0.75rem;
+    font-weight:600;
+    margin:10px 0 0;
+    min-height:1.1em;
+    color:#3f7a2b;
+  }
+
+  @media (max-width:760px){
+    .avis-box{ position:static; width:88vw; max-width:520px; margin:24px auto 0; order:3; }
+  }
+
   /* ---------- Overlay recap A4 ---------- */
   .overlay{
     position:fixed; inset:0;
@@ -619,6 +677,13 @@
 
   <div class="overlay" id="overlay">
     <div class="sheet" id="sheet"></div>
+  </div>
+
+  <div class="avis-box">
+    <h2>Laisser un avis</h2>
+    <textarea id="avisText" placeholder="Ton avis sur le test…" maxlength="1000"></textarea>
+    <button id="sendAvisBtn">Envoyer</button>
+    <p class="avis-msg" id="avisMsg"></p>
   </div>
 
 <script>
@@ -1251,6 +1316,33 @@ async function checkMaintenance(){
     console.error(e);
   }
 }
+
+/* ===================== Avis ===================== */
+document.getElementById('sendAvisBtn').addEventListener('click', async () => {
+  const textarea = document.getElementById('avisText');
+  const msg = document.getElementById('avisMsg');
+  const texte = textarea.value.trim();
+  msg.style.color = '#3f7a2b';
+  if(!texte){
+    msg.style.color = '#c0342c';
+    msg.textContent = 'Écris un avis avant d\'envoyer.';
+    return;
+  }
+  msg.textContent = 'Envoi…';
+  try{
+    const { error } = await sb.from('avis').insert([{ texte }]);
+    if(error){
+      msg.style.color = '#c0342c';
+      msg.textContent = 'Erreur : ' + error.message;
+      return;
+    }
+    textarea.value = '';
+    msg.textContent = 'Merci pour ton avis !';
+  } catch(e){
+    msg.style.color = '#c0342c';
+    msg.textContent = 'Erreur de connexion.';
+  }
+});
 
 /* ===================== Init ===================== */
 renderRegistration();
