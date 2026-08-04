@@ -500,12 +500,32 @@
     z-index:20;
   }
 
-  /* ---------- Boîte avis (bas gauche) ---------- */
-  .avis-box{
+  /* ---------- Colonne bas gauche (bouton info + avis) ---------- */
+  .bottom-left-column{
     position:fixed;
     left:36px;
     bottom:36px;
     width:240px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  #infoBtn{
+    background:var(--btn-gray);
+    border:2px solid #5c5c58;
+    border-radius:14px;
+    padding:12px 14px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:0.9rem;
+    color:var(--ink);
+    cursor:pointer;
+    text-align:center;
+  }
+  #infoBtn:hover{ background:#b7b7b3; }
+
+  .avis-box{
+    width:100%;
     border:2px solid #1c1c18;
     border-radius:20px;
     background:#ffffff;
@@ -555,7 +575,35 @@
   }
 
   @media (max-width:760px){
-    .avis-box{ position:static; width:88vw; max-width:520px; margin:24px auto 0; order:3; }
+    .bottom-left-column{ position:static; width:88vw; max-width:520px; margin:24px auto 0; order:3; }
+  }
+
+  /* ---------- Carte "Fonctionnement du site" ---------- */
+  .info-sheet h2{
+    text-align:center;
+    font-weight:700;
+    font-size:1.2rem;
+    margin:0 0 18px;
+  }
+  .info-sheet .info-text{
+    text-align:left;
+    font-size:0.9rem;
+    line-height:1.5;
+    margin:0 0 22px;
+  }
+  .info-badges{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    align-items:center;
+    margin-bottom:22px;
+  }
+  .info-outro{
+    text-align:center;
+    font-size:0.88rem;
+    font-style:italic;
+    color:#6b6b67;
+    margin:0;
   }
 
   /* ---------- Overlay recap A4 ---------- */
@@ -679,11 +727,14 @@
     <div class="sheet" id="sheet"></div>
   </div>
 
-  <div class="avis-box">
-    <h2> Avis ou question</h2>
-    <textarea id="avisText" placeholder="commentaire ou question…" maxlength="1000"></textarea>
-    <button id="sendAvisBtn">Envoyer</button>
-    <p class="avis-msg" id="avisMsg"></p>
+  <div class="bottom-left-column">
+    <button id="infoBtn">Fonctionnement du site</button>
+    <div class="avis-box">
+      <h2>Avis ou question</h2>
+      <textarea id="avisText" placeholder="Commantaire ou question…" maxlength="1000"></textarea>
+      <button id="sendAvisBtn">Envoyer</button>
+      <p class="avis-msg" id="avisMsg"></p>
+    </div>
   </div>
 
 <script>
@@ -1317,6 +1368,27 @@ async function checkMaintenance(){
   }
 }
 
+/* ===================== Fonctionnement du site ===================== */
+document.getElementById('infoBtn').addEventListener('click', () => {
+  sheet.innerHTML = `
+    <span class="close-x" id="closeSheet">✕</span>
+    <div class="info-sheet">
+      <h2>Fonctionnement du site</h2>
+      <p class="info-text">Ceci est un test qui interroge vos connaissances dans 3 domaines différents. Les résultats sont exprimés avec des badges de couleur différente selon si le résultat est négatif ou positif.</p>
+      <div class="info-badges">
+        <span class="badge extra">Extra</span>
+        <span class="badge bonne">Bonne</span>
+        <span class="badge mediocre">Médiocre</span>
+        <span class="badge mauvaise">Mauvaise</span>
+        <span class="badge nulle">Nulle</span>
+      </div>
+      <p class="info-outro">Ce site n'est qu'un simple site ludique.</p>
+    </div>
+  `;
+  overlay.classList.add('show');
+  document.getElementById('closeSheet').addEventListener('click', () => overlay.classList.remove('show'));
+});
+
 /* ===================== Avis ===================== */
 document.getElementById('sendAvisBtn').addEventListener('click', async () => {
   const textarea = document.getElementById('avisText');
@@ -1351,3 +1423,4 @@ checkMaintenance();
 </script>
 </body>
 </html>
+
