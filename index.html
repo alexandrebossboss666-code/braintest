@@ -500,32 +500,12 @@
     z-index:20;
   }
 
-  /* ---------- Colonne bas gauche (bouton info + avis) ---------- */
-  .bottom-left-column{
+  /* ---------- Boîte avis (bas gauche) ---------- */
+  .avis-box{
     position:fixed;
     left:36px;
     bottom:36px;
     width:240px;
-    display:flex;
-    flex-direction:column;
-    gap:14px;
-  }
-  #infoBtn{
-    background:var(--btn-gray);
-    border:2px solid #5c5c58;
-    border-radius:14px;
-    padding:12px 14px;
-    font-family:'Space Grotesk',sans-serif;
-    font-weight:600;
-    font-size:0.9rem;
-    color:var(--ink);
-    cursor:pointer;
-    text-align:center;
-  }
-  #infoBtn:hover{ background:#b7b7b3; }
-
-  .avis-box{
-    width:100%;
     border:2px solid #1c1c18;
     border-radius:20px;
     background:#ffffff;
@@ -575,8 +555,39 @@
   }
 
   @media (max-width:760px){
-    .bottom-left-column{ position:static; width:88vw; max-width:520px; margin:24px auto 0; order:3; }
+    .avis-box{ position:static; width:88vw; max-width:520px; margin:24px auto 0; order:3; }
   }
+
+  /* ---------- Lien "Fonctionnement du site" (sous le formulaire) ---------- */
+  .info-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    margin-top:16px;
+    cursor:pointer;
+  }
+  .info-row span.info-label{
+    font-size:0.82rem;
+    font-weight:600;
+    color:#4d4d49;
+  }
+  .info-circle{
+    width:18px;
+    height:18px;
+    border-radius:50%;
+    border:1.5px solid #4d4d49;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.7rem;
+    color:#4d4d49;
+    flex-shrink:0;
+  }
+  .info-row:hover .info-label,
+  .info-row:hover .info-circle{ color:var(--accent-dark); border-color:var(--accent-dark); }
 
   /* ---------- Carte "Fonctionnement du site" ---------- */
   .info-sheet h2{
@@ -727,14 +738,11 @@
     <div class="sheet" id="sheet"></div>
   </div>
 
-  <div class="bottom-left-column">
-    <button id="infoBtn">Fonctionnement du site</button>
-    <div class="avis-box">
-      <h2>Avis ou question</h2>
-      <textarea id="avisText" placeholder="Commantaire ou question…" maxlength="1000"></textarea>
-      <button id="sendAvisBtn">Envoyer</button>
-      <p class="avis-msg" id="avisMsg"></p>
-    </div>
+  <div class="avis-box">
+    <h2> Avis ou question </h2>
+    <textarea id="avisText" placeholder="Commentaire ou question…" maxlength="1000"></textarea>
+    <button id="sendAvisBtn">Envoyer</button>
+    <p class="avis-msg" id="avisMsg"></p>
   </div>
 
 <script>
@@ -868,7 +876,13 @@ function renderRegistration(){
     <div class="start-row">
       <button id="startBtn" disabled>Commencer le test</button>
     </div>
+    <div class="info-row" id="infoRow">
+      <span class="info-label">Fonctionnement du site</span>
+      <span class="info-circle">i</span>
+    </div>
   `;
+
+  document.getElementById('infoRow').addEventListener('click', openInfoSheet);
 
   const inputs = ['fNom','fPrenom','fDate','fGenre'].map(id => document.getElementById(id));
   const startBtn = document.getElementById('startBtn');
@@ -1369,7 +1383,7 @@ async function checkMaintenance(){
 }
 
 /* ===================== Fonctionnement du site ===================== */
-document.getElementById('infoBtn').addEventListener('click', () => {
+function openInfoSheet(){
   sheet.innerHTML = `
     <span class="close-x" id="closeSheet">✕</span>
     <div class="info-sheet">
@@ -1387,7 +1401,7 @@ document.getElementById('infoBtn').addEventListener('click', () => {
   `;
   overlay.classList.add('show');
   document.getElementById('closeSheet').addEventListener('click', () => overlay.classList.remove('show'));
-});
+}
 
 /* ===================== Avis ===================== */
 document.getElementById('sendAvisBtn').addEventListener('click', async () => {
@@ -1423,4 +1437,5 @@ checkMaintenance();
 </script>
 </body>
 </html>
+
 
