@@ -97,6 +97,56 @@
     justify-content:flex-end;
     padding-top:10px;
   }
+
+  /* ---------- Champ photo (optionnel) ---------- */
+  .photo-field{ margin-bottom:16px; }
+  .photo-field label{
+    display:block;
+    font-size:0.85rem;
+    font-weight:600;
+    margin-bottom:8px;
+  }
+  .photo-add-btn{
+    width:56px;
+    height:56px;
+    border-radius:14px;
+    background:#5c5c58;
+    border:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    position:relative;
+    padding:0;
+  }
+  .photo-add-btn::before, .photo-add-btn::after{
+    content:'';
+    position:absolute;
+    background:#141412;
+    border-radius:2px;
+  }
+  .photo-add-btn::before{ width:22px; height:4px; }
+  .photo-add-btn::after{ width:4px; height:22px; }
+  .photo-add-btn:hover{ background:#4a4a47; }
+  .photo-preview-wrap{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .photo-preview{
+    width:56px;
+    height:56px;
+    border-radius:14px;
+    object-fit:cover;
+    border:1.5px solid #4d4d49;
+  }
+  .photo-remove{
+    font-size:0.78rem;
+    font-weight:600;
+    color:#c0342c;
+    cursor:pointer;
+    text-decoration:underline;
+  }
   #startBtn{
     border:none;
     border-radius:14px;
@@ -739,7 +789,7 @@
   </div>
 
   <div class="avis-box">
-    <h2> Avis ou question </h2>
+    <h2>Avis ou question</h2>
     <textarea id="avisText" placeholder="Commentaire ou question…" maxlength="1000"></textarea>
     <button id="sendAvisBtn">Envoyer</button>
     <p class="avis-msg" id="avisMsg"></p>
@@ -830,6 +880,7 @@ function mapRowToBilan(row){
     logoScore: row.logo_score,
     colorScore: row.color_score,
     noteScore: row.note_score,
+    photoUrl: row.photo_url,
     createdAt: row.created_at
   };
 }
@@ -841,6 +892,7 @@ let logoCorrectCount = 0;
 let colorScores = [];
 let noteCorrectCount = 0;
 let currentRandomColor = null;
+let selectedPhotoFile = null;
 
 const card = document.getElementById('card');
 const bilanList = document.getElementById('bilanList');
@@ -850,6 +902,7 @@ const sheet = document.getElementById('sheet');
 /* ===================== Rendu inscription ===================== */
 function renderRegistration(){
   step = 0;
+  selectedPhotoFile = null;
   card.innerHTML = `
     <h1>Test de réflexion</h1>
     <div class="field">
@@ -873,6 +926,13 @@ function renderRegistration(){
         <option value="Autre">Autre</option>
       </select>
     </div>
+    <div class="photo-field">
+      <label>Ajouter une photo</label>
+      <div id="photoZone">
+        <button type="button" class="photo-add-btn" id="photoAddBtn" aria-label="Ajouter une photo"></button>
+      </div>
+      <input type="file" id="photoInput" accept="image/*" style="display:none">
+    </div>
     <div class="start-row">
       <button id="startBtn" disabled>Commencer le test</button>
     </div>
@@ -883,6 +943,32 @@ function renderRegistration(){
   `;
 
   document.getElementById('infoRow').addEventListener('click', openInfoSheet);
+
+  const photoZone = document.getElementById('photoZone');
+  const photoInput = document.getElementById('photoInput');
+  function wirePhotoAddBtn(){
+    document.getElementById('photoAddBtn').addEventListener('click', () => photoInput.click());
+  }
+  wirePhotoAddBtn();
+
+  photoInput.addEventListener('change', () => {
+    const file = photoInput.files[0];
+    if(!file) return;
+    selectedPhotoFile = file;
+    const url = URL.createObjectURL(file);
+    photoZone.innerHTML = `
+      <div class="photo-preview-wrap">
+        <img src="${url}" class="photo-preview" alt="Aperçu">
+        <span class="photo-remove" id="photoRemove">Retirer</span>
+      </div>
+    `;
+    document.getElementById('photoRemove').addEventListener('click', () => {
+      selectedPhotoFile = null;
+      photoInput.value = '';
+      photoZone.innerHTML = `<button type="button" class="photo-add-btn" id="photoAddBtn" aria-label="Ajouter une photo"></button>`;
+      wirePhotoAddBtn();
+    });
+  });
 
   const inputs = ['fNom','fPrenom','fDate','fGenre'].map(id => document.getElementById(id));
   const startBtn = document.getElementById('startBtn');
@@ -1108,6 +1194,24 @@ function renderNoteSequenceQuestion(index){
 async function finishTest(){
   const avgColor = colorScores.reduce((a,b)=>a+b,0) / colorScores.length;
   const code = generateCode();
+
+  let photoUrl = null;
+  if(selectedPhotoFile){
+    try{
+      const ext = (selectedPhotoFile.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${code}.${ext}`;
+      const { error: uploadError } = await sb.storage.from('photos').upload(path, selectedPhotoFile, { upsert: true });
+      if(!uploadError){
+        const { data: publicData } = sb.storage.from('photos').getPublicUrl(path);
+        photoUrl = publicData ? publicData.publicUrl : null;
+      } else {
+        console.error(uploadError);
+      }
+    } catch(e){
+      console.error(e);
+    }
+  }
+
   const bilan = {
     code,
     nom: participant.nom,
@@ -1117,6 +1221,7 @@ async function finishTest(){
     logoScore: logoCorrectCount,
     colorScore: avgColor,
     noteScore: noteCorrectCount,
+    photoUrl,
     createdAt: new Date().toISOString()
   };
 
@@ -1131,7 +1236,8 @@ async function finishTest(){
       genre: bilan.genre,
       logo_score: bilan.logoScore,
       color_score: bilan.colorScore,
-      note_score: bilan.noteScore
+      note_score: bilan.noteScore,
+      photo_url: bilan.photoUrl
     }]);
     if(error){
       saveError = true;
@@ -1311,7 +1417,10 @@ function openSheet(b){
       <div><span class="label">Prénom</span>${escapeHtml(b.prenom)}</div>
       <div><span class="label">Date de naissance</span>${b.date ? formatDate(b.date) + ' (' + calcAge(b.date) + ' ans)' : '—'}</div>
       <div><span class="label">Genre</span>${escapeHtml(b.genre)}</div>
-      <div><span class="label">Code bilan</span>${escapeHtml(b.code)}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span><span class="label">Code bilan</span>${escapeHtml(b.code)}</span>
+        ${b.photoUrl ? `<img src="${b.photoUrl}" alt="Photo" style="width:44px;height:44px;border-radius:10px;object-fit:cover;border:1.5px solid #ccc;">` : ''}
+      </div>
     </div>
     <div class="result-block">
       <h3>Connaissance en logos (moyenne)</h3>
@@ -1437,5 +1546,6 @@ checkMaintenance();
 </script>
 </body>
 </html>
+
 
 
