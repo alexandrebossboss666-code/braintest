@@ -789,8 +789,8 @@
   </div>
 
   <div class="avis-box">
-    <h2>Avis ou question</h2>
-    <textarea id="avisText" placeholder="Commentaire ou question…" maxlength="1000"></textarea>
+    <h2>Laisser un avis</h2>
+    <textarea id="avisText" placeholder="Ton avis sur le test…" maxlength="1000"></textarea>
     <button id="sendAvisBtn">Envoyer</button>
     <p class="avis-msg" id="avisMsg"></p>
   </div>
@@ -1196,6 +1196,7 @@ async function finishTest(){
   const code = generateCode();
 
   let photoUrl = null;
+  let photoErrorDetail = '';
   if(selectedPhotoFile){
     try{
       const ext = (selectedPhotoFile.name.split('.').pop() || 'jpg').toLowerCase();
@@ -1205,9 +1206,11 @@ async function finishTest(){
         const { data: publicData } = sb.storage.from('photos').getPublicUrl(path);
         photoUrl = publicData ? publicData.publicUrl : null;
       } else {
+        photoErrorDetail = uploadError.message || JSON.stringify(uploadError);
         console.error(uploadError);
       }
     } catch(e){
+      photoErrorDetail = e.message || String(e);
       console.error(e);
     }
   }
@@ -1248,6 +1251,11 @@ async function finishTest(){
     saveError = true;
     saveErrorDetail = e.message || String(e);
     console.error(e);
+  }
+
+  if(photoErrorDetail && !saveError){
+    saveError = true;
+    saveErrorDetail = 'Photo non enregistrée : ' + photoErrorDetail;
   }
 
   addLocalBilan(bilan);
@@ -1546,6 +1554,7 @@ checkMaintenance();
 </script>
 </body>
 </html>
+
 
 
 
