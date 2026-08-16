@@ -835,13 +835,18 @@ const LOGO_QUESTIONS = [
 const NUM_COLOR_QUESTIONS = 4;
 
 const NOTES = {
-  'Do':  261.63,
-  'Ré':  293.66,
-  'Mi':  329.63,
-  'Fa':  349.23,
-  'Sol': 392.00,
-  'La':  440.00,
-  'Si':  493.88
+  'Do':   261.63,
+  'Do#':  277.18,
+  'Ré':   293.66,
+  'Ré#':  311.13,
+  'Mi':   329.63,
+  'Fa':   349.23,
+  'Fa#':  369.99,
+  'Sol':  392.00,
+  'Sol#': 415.30,
+  'La':   440.00,
+  'La#':  466.16,
+  'Si':   493.88
 };
 const NOTE_NAMES = Object.keys(NOTES);
 const NUM_NOTE_SINGLE_QUESTIONS = 2;
@@ -918,7 +923,9 @@ function compressImage(file, maxDimension = 1400, quality = 0.8){
 /* ===================== Supabase ===================== */
 const SUPABASE_URL = 'https://alrcdwhyrgqqrfyxqklg.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_AXSZBIjcBZbAVosgFccfYQ_dUVhaXa0';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+});
 
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // sans O/0, I/1 pour éviter la confusion
 function generateCode(len = 6){
@@ -1603,7 +1610,7 @@ document.getElementById('sendAvisBtn').addEventListener('click', async () => {
   msg.style.color = '#3f7a2b';
   if(!texte){
     msg.style.color = '#c0342c';
-    msg.textContent = 'Écris un avis avant d\'envoyer.';
+    msg.innerHTML = errorLineHTML('Écris un avis avant d\'envoyer.');
     return;
   }
   msg.textContent = 'Envoi…';
@@ -1611,14 +1618,14 @@ document.getElementById('sendAvisBtn').addEventListener('click', async () => {
     const { error } = await sb.from('avis').insert([{ texte }]);
     if(error){
       msg.style.color = '#c0342c';
-      msg.textContent = 'Erreur : ' + error.message;
+      msg.innerHTML = errorLineHTML('Erreur : ' + error.message);
       return;
     }
     textarea.value = '';
     msg.textContent = 'Merci pour ton avis !';
   } catch(e){
     msg.style.color = '#c0342c';
-    msg.textContent = 'Erreur de connexion.';
+    msg.innerHTML = errorLineHTML('Erreur de connexion.');
   }
 });
 
@@ -1629,8 +1636,6 @@ checkMaintenance();
 </script>
 </body>
 </html>
-
-
 
 
 
