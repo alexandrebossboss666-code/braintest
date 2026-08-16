@@ -148,6 +148,74 @@
     cursor:pointer;
     text-decoration:underline;
   }
+
+  /* ---------- Bouton Mode expert ---------- */
+  .expert-row{ margin-bottom:16px; }
+  #expertModeBtn{
+    width:100%;
+    border:none;
+    border-radius:14px;
+    padding:11px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.9rem;
+    cursor:pointer;
+    background:#c0342c;
+    color:#fff;
+    transition:background .2s ease;
+  }
+  #expertModeBtn.active{
+    background:#2f5fa3;
+  }
+
+  /* ---------- Étiquette de mode (bilan) ---------- */
+  .mode-tag{
+    position:absolute;
+    top:14px; left:16px;
+    padding:5px 12px;
+    border-radius:10px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.7rem;
+    color:#fff;
+  }
+  .mode-tag.normal{ background:#2f5fa3; }
+  .mode-tag.expert{ background:#c0342c; }
+
+  /* ---------- Champ code hex (mode expert) ---------- */
+  .hex-input-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .hex-input-row input{
+    width:130px;
+    padding:10px 12px;
+    border-radius:10px;
+    border:1.5px solid #9b9b96;
+    background:#fbfbfa;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:0.95rem;
+    text-align:center;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+  }
+  .hex-input-row input:focus{
+    outline:2px solid var(--accent-dark);
+    outline-offset:1px;
+  }
+
+  /* ---------- Minuteur (mode expert) ---------- */
+  .timer-display{
+    text-align:center;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.95rem;
+    color:#c0342c;
+    margin-bottom:10px;
+  }
   #startBtn{
     border:none;
     border-radius:14px;
@@ -821,7 +889,7 @@
 
 <script>
 /* ===================== Données du test ===================== */
-const LOGO_QUESTIONS = [
+const LOGO_QUESTIONS_NORMAL = [
   { gradient: "linear-gradient(to right, #e53935 0%, #e53935 33.33%, #fdd835 33.33%, #fdd835 66.66%, #1e5fbf 66.66%, #1e5fbf 100%)",
     options: ["Aldi", "Lidl", "Ikea"], answer: "Lidl" },
   { gradient: "linear-gradient(to right, #d81f26 0%, #d81f26 50%, #141414 50%, #141414 100%)",
@@ -830,6 +898,17 @@ const LOGO_QUESTIONS = [
     options: ["John Deere", "Schneider", "Rizer"], answer: "John Deere" },
   { gradient: "linear-gradient(to right, #6f4225 0%, #6f4225 25%, #ffffff 25%, #ffffff 50%, #d62300 50%, #d62300 75%, #003087 75%, #003087 100%)",
     options: ["McDonald's", "Burger King", "O'Tacos"], answer: "Burger King" }
+];
+
+const LOGO_QUESTIONS_EXPERT = [
+  { gradient: "linear-gradient(to right, #4d148c 0%, #4d148c 50%, #ff6600 50%, #ff6600 100%)",
+    options: ["UPS", "DHL", "FedEx"], answer: "FedEx" },
+  { gradient: "linear-gradient(to right, #009246 0%, #009246 33.33%, #ffffff 33.33%, #ffffff 66.66%, #ce2b37 66.66%, #ce2b37 100%)",
+    options: ["Lacoste", "Perrier", "Barilla"], answer: "Barilla" },
+  { gradient: "linear-gradient(to right, #141414 0%, #141414 50%, #ffcc00 50%, #ffcc00 100%)",
+    options: ["Renault", "National Geographic", "DHL"], answer: "National Geographic" },
+  { gradient: "linear-gradient(to right, #004b93 0%, #004b93 33.33%, #ffffff 33.33%, #ffffff 66.66%, #ed1c24 66.66%, #ed1c24 100%)",
+    options: ["Domino's", "KFC", "Pepsi"], answer: "Pepsi" }
 ];
 
 const NUM_COLOR_QUESTIONS = 4;
@@ -849,9 +928,21 @@ const NOTES = {
   'Si':   493.88
 };
 const NOTE_NAMES = Object.keys(NOTES);
+
+const CHORDS = {
+  'Do majeur':  ['Do', 'Mi', 'Sol'],
+  'Ré mineur':  ['Ré', 'Fa', 'La'],
+  'Mi mineur':  ['Mi', 'Sol', 'Si'],
+  'Fa majeur':  ['Fa', 'La', 'Do'],
+  'Sol majeur': ['Sol', 'Si', 'Ré'],
+  'La mineur':  ['La', 'Do', 'Mi']
+};
+const CHORD_NAMES = Object.keys(CHORDS);
+
 const NUM_NOTE_SINGLE_QUESTIONS = 2;
 const NUM_NOTE_SEQUENCE_QUESTIONS = 2;
-const TOTAL_QUESTIONS = LOGO_QUESTIONS.length + NUM_COLOR_QUESTIONS + NUM_NOTE_SINGLE_QUESTIONS + NUM_NOTE_SEQUENCE_QUESTIONS;
+const TOTAL_QUESTIONS = LOGO_QUESTIONS_NORMAL.length + NUM_COLOR_QUESTIONS + NUM_NOTE_SINGLE_QUESTIONS + NUM_NOTE_SEQUENCE_QUESTIONS;
+const EXPERT_TIME_LIMIT = 60;
 
 let audioCtx = null;
 function playTone(freq, duration = 0.55){
@@ -875,6 +966,15 @@ function playTone(freq, duration = 0.55){
 function playSequence(noteNames, gap = 0.65){
   noteNames.forEach((n, i) => {
     setTimeout(() => playTone(NOTES[n]), i * gap * 1000);
+  });
+}
+function playChord(chordName, duration = 0.9){
+  const notes = CHORDS[chordName] || [];
+  notes.forEach(n => playTone(NOTES[n], duration));
+}
+function playChordSequence(chordNames, gap = 1.1){
+  chordNames.forEach((c, i) => {
+    setTimeout(() => playChord(c), i * gap * 1000);
   });
 }
 function shuffle(arr){
@@ -946,6 +1046,7 @@ function mapRowToBilan(row){
     colorScore: row.color_score,
     noteScore: row.note_score,
     photoUrl: row.photo_url,
+    mode: row.mode || 'normal',
     createdAt: row.created_at
   };
 }
@@ -958,6 +1059,11 @@ let colorScores = [];
 let noteCorrectCount = 0;
 let currentRandomColor = null;
 let selectedPhotoFile = null;
+let isExpertMode = false;
+let testIsExpert = false;
+let expertTimerInterval = null;
+let expertTimeRemaining = EXPERT_TIME_LIMIT;
+let testEnded = false;
 
 const card = document.getElementById('card');
 const bilanList = document.getElementById('bilanList');
@@ -968,6 +1074,7 @@ const sheet = document.getElementById('sheet');
 function renderRegistration(){
   step = 0;
   selectedPhotoFile = null;
+  isExpertMode = false;
   card.innerHTML = `
     <h1>Test de réflexion</h1>
     <div class="field">
@@ -991,6 +1098,9 @@ function renderRegistration(){
         <option value="Autre">Autre</option>
       </select>
     </div>
+    <div class="expert-row">
+      <button type="button" id="expertModeBtn">Mode expert</button>
+    </div>
     <div class="photo-field">
       <label>Ajouter une photo</label>
       <div id="photoZone">
@@ -1008,6 +1118,13 @@ function renderRegistration(){
   `;
 
   document.getElementById('infoRow').addEventListener('click', openInfoSheet);
+
+  const expertBtn = document.getElementById('expertModeBtn');
+  expertBtn.addEventListener('click', () => {
+    isExpertMode = !isExpertMode;
+    expertBtn.classList.toggle('active', isExpertMode);
+    expertBtn.textContent = isExpertMode ? 'Mode normal' : 'Mode expert';
+  });
 
   const photoZone = document.getElementById('photoZone');
   const photoInput = document.getElementById('photoInput');
@@ -1057,15 +1174,49 @@ function renderRegistration(){
     logoCorrectCount = 0;
     colorScores = [];
     noteCorrectCount = 0;
+    testIsExpert = isExpertMode;
+    testEnded = false;
     step = 1;
+    if(testIsExpert) startExpertTimer();
     renderLogoQuestion(0);
   });
 }
 
+/* ===================== Minuteur (mode expert) ===================== */
+function startExpertTimer(){
+  clearInterval(expertTimerInterval);
+  expertTimeRemaining = EXPERT_TIME_LIMIT;
+  updateTimerDisplay();
+  expertTimerInterval = setInterval(() => {
+    expertTimeRemaining--;
+    updateTimerDisplay();
+    if(expertTimeRemaining <= 0){
+      clearInterval(expertTimerInterval);
+      if(!testEnded){
+        testEnded = true;
+        renderLoadingScreen();
+        finishTest();
+      }
+    }
+  }, 1000);
+}
+function updateTimerDisplay(){
+  const el = document.getElementById('timerDisplay');
+  if(!el) return;
+  const m = Math.floor(Math.max(0, expertTimeRemaining) / 60).toString().padStart(2, '0');
+  const s = Math.max(0, expertTimeRemaining % 60).toString().padStart(2, '0');
+  el.textContent = `⏱ ${m}:${s}`;
+}
+function timerHTML(){
+  return testIsExpert ? `<div class="timer-display" id="timerDisplay"></div>` : '';
+}
+
 /* ===================== Questions logo (1-4) ===================== */
 function renderLogoQuestion(index){
+  const LOGO_QUESTIONS = testIsExpert ? LOGO_QUESTIONS_EXPERT : LOGO_QUESTIONS_NORMAL;
   const q = LOGO_QUESTIONS[index];
   card.innerHTML = `
+    ${timerHTML()}
     <div class="quiz-progress">Question ${index+1} / ${TOTAL_QUESTIONS}</div>
     <div class="logo-square" style="background:${q.gradient}"></div>
     <p class="question-text">Choisis le nom du logo</p>
@@ -1074,6 +1225,7 @@ function renderLogoQuestion(index){
     </div>
     <p class="feedback-flash" id="feedback"></p>
   `;
+  updateTimerDisplay();
   const buttons = card.querySelectorAll('.opt-btn');
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1090,6 +1242,7 @@ function renderLogoQuestion(index){
         document.getElementById('feedback').textContent = 'Pas tout à fait…';
       }
       setTimeout(() => {
+        if(testEnded) return;
         if(index + 1 < LOGO_QUESTIONS.length){
           renderLogoQuestion(index + 1);
         } else {
@@ -1126,24 +1279,46 @@ function colorCloseness(c1, c2){
 
 function renderColorQuestion(index){
   currentRandomColor = randomColor();
+  const pickerHTML = testIsExpert
+    ? `<div class="hex-input-row">
+         <input type="text" id="hexInput" placeholder="#RRGGBB" maxlength="7">
+         <button id="validateColorBtn">Valider</button>
+       </div>`
+    : `<div class="color-pick-row">
+         <input type="color" id="colorInput" value="#808080">
+         <button id="validateColorBtn">Valider</button>
+       </div>`;
   card.innerHTML = `
+    ${timerHTML()}
     <div class="quiz-progress">Question ${index+5} / ${TOTAL_QUESTIONS}</div>
     <div class="color-rect" style="background:${currentRandomColor.hex}"></div>
-    <p class="question-text">Trouve la bonne couleur</p>
-    <div class="color-pick-row">
-      <input type="color" id="colorInput" value="#808080">
-      <button id="validateColorBtn">Valider</button>
-    </div>
+    <p class="question-text">${testIsExpert ? 'Trouve le code HTML exact de la couleur' : 'Trouve la bonne couleur'}</p>
+    ${pickerHTML}
     <p class="feedback-flash" id="feedback"></p>
   `;
+  updateTimerDisplay();
+
   document.getElementById('validateColorBtn').addEventListener('click', () => {
-    const picked = hexToRgb(document.getElementById('colorInput').value);
+    let picked;
+    if(testIsExpert){
+      const raw = document.getElementById('hexInput').value.trim();
+      const valid = /^#?[0-9a-fA-F]{6}$/.test(raw);
+      if(!valid){
+        document.getElementById('feedback').innerHTML = errorLineHTML('Entre un code valide, ex : #A3B5C1');
+        return;
+      }
+      picked = hexToRgb(raw.startsWith('#') ? raw : '#' + raw);
+    } else {
+      picked = hexToRgb(document.getElementById('colorInput').value);
+    }
     const score = colorCloseness(currentRandomColor, picked);
     colorScores.push(score);
     document.getElementById('feedback').textContent = `Proximité : ${score.toFixed(0)}%`;
     document.getElementById('validateColorBtn').disabled = true;
-    document.getElementById('colorInput').disabled = true;
+    if(document.getElementById('colorInput')) document.getElementById('colorInput').disabled = true;
+    if(document.getElementById('hexInput')) document.getElementById('hexInput').disabled = true;
     setTimeout(() => {
+      if(testEnded) return;
       if(index + 1 < NUM_COLOR_QUESTIONS){
         renderColorQuestion(index + 1);
       } else {
@@ -1153,23 +1328,28 @@ function renderColorQuestion(index){
   });
 }
 
-/* ===================== Questions notes simples (9-10) ===================== */
+/* ===================== Questions notes simples / accords (9-10) ===================== */
 function renderNoteSingleQuestion(index){
-  const target = NOTE_NAMES[Math.floor(Math.random() * NOTE_NAMES.length)];
-  const distractors = shuffle(NOTE_NAMES.filter(n => n !== target)).slice(0, 2);
+  const pool = testIsExpert ? CHORD_NAMES : NOTE_NAMES;
+  const target = pool[Math.floor(Math.random() * pool.length)];
+  const distractors = shuffle(pool.filter(n => n !== target)).slice(0, 2);
   const options = shuffle([target, ...distractors]);
 
   card.innerHTML = `
-    <div class="quiz-progress">Question ${LOGO_QUESTIONS.length + NUM_COLOR_QUESTIONS + index + 1} / ${TOTAL_QUESTIONS}</div>
-    <div class="play-wrap"><div class="play-btn" id="playBtn" role="button" aria-label="Écouter la note"></div></div>
-    <p class="question-text">Quelle note viens-tu d'entendre ?</p>
+    ${timerHTML()}
+    <div class="quiz-progress">Question ${LOGO_QUESTIONS_NORMAL.length + NUM_COLOR_QUESTIONS + index + 1} / ${TOTAL_QUESTIONS}</div>
+    <div class="play-wrap"><div class="play-btn" id="playBtn" role="button" aria-label="Écouter"></div></div>
+    <p class="question-text">${testIsExpert ? "Quel accord viens-tu d'entendre ?" : "Quelle note viens-tu d'entendre ?"}</p>
     <div class="options">
       ${options.map((opt,i) => `<button class="opt-btn" data-opt="${i}">${opt}</button>`).join('')}
     </div>
     <p class="feedback-flash" id="feedback"></p>
   `;
+  updateTimerDisplay();
 
-  document.getElementById('playBtn').addEventListener('click', () => playTone(NOTES[target]));
+  document.getElementById('playBtn').addEventListener('click', () => {
+    if(testIsExpert) playChord(target); else playTone(NOTES[target]);
+  });
 
   const buttons = card.querySelectorAll('.opt-btn');
   buttons.forEach(btn => {
@@ -1187,6 +1367,7 @@ function renderNoteSingleQuestion(index){
         document.getElementById('feedback').textContent = 'Pas tout à fait…';
       }
       setTimeout(() => {
+        if(testEnded) return;
         if(index + 1 < NUM_NOTE_SINGLE_QUESTIONS){
           renderNoteSingleQuestion(index + 1);
         } else {
@@ -1197,9 +1378,10 @@ function renderNoteSingleQuestion(index){
   });
 }
 
-/* ===================== Questions mélodie (11-12) ===================== */
+/* ===================== Questions mélodie / suite d'accords (11-12) ===================== */
 function renderNoteSequenceQuestion(index){
-  const targetSequence = shuffle(NOTE_NAMES).slice(0, 4);
+  const pool = testIsExpert ? CHORD_NAMES : NOTE_NAMES;
+  const targetSequence = shuffle(pool).slice(0, 4);
   let bandOrder = shuffle(targetSequence);
   while(bandOrder.join() === targetSequence.join()){
     bandOrder = shuffle(targetSequence);
@@ -1207,9 +1389,10 @@ function renderNoteSequenceQuestion(index){
 
   function draw(){
     card.innerHTML = `
-      <div class="quiz-progress">Question ${LOGO_QUESTIONS.length + NUM_COLOR_QUESTIONS + NUM_NOTE_SINGLE_QUESTIONS + index + 1} / ${TOTAL_QUESTIONS}</div>
-      <div class="play-wrap"><div class="play-btn" id="playBtn" role="button" aria-label="Écouter la mélodie"></div></div>
-      <p class="question-text">Remets les notes dans le bon ordre</p>
+      ${timerHTML()}
+      <div class="quiz-progress">Question ${LOGO_QUESTIONS_NORMAL.length + NUM_COLOR_QUESTIONS + NUM_NOTE_SINGLE_QUESTIONS + index + 1} / ${TOTAL_QUESTIONS}</div>
+      <div class="play-wrap"><div class="play-btn" id="playBtn" role="button" aria-label="Écouter"></div></div>
+      <p class="question-text">${testIsExpert ? 'Remets les accords dans le bon ordre' : 'Remets les notes dans le bon ordre'}</p>
       <div class="note-bands" id="bandsWrap">
         ${bandOrder.map((n,i) => `
           <div class="note-band" data-note="${n}">
@@ -1224,7 +1407,10 @@ function renderNoteSequenceQuestion(index){
       <button id="validateOrderBtn">Valider</button>
       <p class="feedback-flash" id="feedback"></p>
     `;
-    document.getElementById('playBtn').addEventListener('click', () => playSequence(targetSequence));
+    updateTimerDisplay();
+    document.getElementById('playBtn').addEventListener('click', () => {
+      if(testIsExpert) playChordSequence(targetSequence); else playSequence(targetSequence);
+    });
     card.querySelectorAll('.arrows button').forEach(btn => {
       btn.addEventListener('click', () => {
         const i = parseInt(btn.dataset.idx, 10);
@@ -1244,6 +1430,7 @@ function renderNoteSequenceQuestion(index){
       document.getElementById('validateOrderBtn').disabled = true;
       card.querySelectorAll('.arrows button').forEach(b => b.disabled = true);
       setTimeout(() => {
+        if(testEnded) return;
         if(index + 1 < NUM_NOTE_SEQUENCE_QUESTIONS){
           renderNoteSequenceQuestion(index + 1);
         } else {
@@ -1268,7 +1455,9 @@ function renderLoadingScreen(){
 
 /* ===================== Fin du test / bilan ===================== */
 async function finishTest(){
-  const avgColor = colorScores.reduce((a,b)=>a+b,0) / colorScores.length;
+  clearInterval(expertTimerInterval);
+  testEnded = true;
+  const avgColor = colorScores.length ? colorScores.reduce((a,b)=>a+b,0) / colorScores.length : 0;
   const code = generateCode();
 
   let photoUrl = null;
@@ -1306,6 +1495,7 @@ async function finishTest(){
     colorScore: avgColor,
     noteScore: noteCorrectCount,
     photoUrl,
+    mode: testIsExpert ? 'expert' : 'normal',
     createdAt: new Date().toISOString()
   };
 
@@ -1321,7 +1511,8 @@ async function finishTest(){
       logo_score: bilan.logoScore,
       color_score: bilan.colorScore,
       note_score: bilan.noteScore,
-      photo_url: bilan.photoUrl
+      photo_url: bilan.photoUrl,
+      mode: bilan.mode
     }]);
     if(error){
       saveError = true;
@@ -1500,8 +1691,10 @@ function openSheet(b){
   const lb = logoBadge(b.logoScore);
   const cb = colorBadge(b.colorScore);
   const nb = typeof b.noteScore === 'number' ? logoBadge(b.noteScore) : null;
+  const mode = b.mode === 'expert' ? 'expert' : 'normal';
   sheet.innerHTML = `
     <span class="close-x" id="closeSheet">✕</span>
+    <span class="mode-tag ${mode}">${mode === 'expert' ? 'Mode expert' : 'Mode normal'}</span>
     <h2>Récapitulatif</h2>
     <p class="subtitle">Test de réflexion</p>
     <div class="info-grid">
@@ -1636,6 +1829,7 @@ checkMaintenance();
 </script>
 </body>
 </html>
+
 
 
 
