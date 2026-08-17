@@ -881,7 +881,7 @@
   </div>
 
   <div class="avis-box">
-    <h2>avis ou question</h2>
+    <h2> avis ou question</h2>
     <textarea id="avisText" placeholder="blablabla…" maxlength="1000"></textarea>
     <button id="sendAvisBtn">Envoyer</button>
     <p class="avis-msg" id="avisMsg"></p>
@@ -942,7 +942,7 @@ const CHORD_NAMES = Object.keys(CHORDS);
 const NUM_NOTE_SINGLE_QUESTIONS = 2;
 const NUM_NOTE_SEQUENCE_QUESTIONS = 2;
 const TOTAL_QUESTIONS = LOGO_QUESTIONS_NORMAL.length + NUM_COLOR_QUESTIONS + NUM_NOTE_SINGLE_QUESTIONS + NUM_NOTE_SEQUENCE_QUESTIONS;
-const EXPERT_TIME_LIMIT = 60;
+const EXPERT_TIME_LIMIT = 180;
 
 let audioCtx = null;
 function playTone(freq, duration = 0.55){
@@ -1193,12 +1193,41 @@ function startExpertTimer(){
     if(expertTimeRemaining <= 0){
       clearInterval(expertTimerInterval);
       if(!testEnded){
-        testEnded = true;
-        renderLoadingScreen();
-        finishTest();
+        showTimeUpModal();
       }
     }
   }, 1000);
+}
+let forceModalChoice = false;
+function showTimeUpModal(){
+  forceModalChoice = true;
+  sheet.innerHTML = `
+    <h2 style="text-align:center;margin-bottom:24px;">Voulez-vous retenter ?</h2>
+    <div style="display:flex;justify-content:space-between;gap:14px;">
+      <button id="abandonBtn" style="flex:1;border:1.5px solid #8f8f8a;background:var(--btn-gray);color:var(--ink);border-radius:14px;padding:12px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.9rem;cursor:pointer;">Abandonner</button>
+      <button id="replayBtn" style="flex:1;border:none;background:var(--accent);color:#3a2408;border-radius:14px;padding:12px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:0.9rem;cursor:pointer;">Rejouer</button>
+    </div>
+  `;
+  overlay.classList.add('show');
+
+  document.getElementById('abandonBtn').addEventListener('click', () => {
+    forceModalChoice = false;
+    overlay.classList.remove('show');
+    testEnded = true;
+    clearInterval(expertTimerInterval);
+    renderRegistration();
+  });
+  document.getElementById('replayBtn').addEventListener('click', () => {
+    forceModalChoice = false;
+    overlay.classList.remove('show');
+    logoCorrectCount = 0;
+    colorScores = [];
+    noteCorrectCount = 0;
+    testEnded = false;
+    step = 1;
+    startExpertTimer();
+    renderLogoQuestion(0);
+  });
 }
 function updateTimerDisplay(){
   const el = document.getElementById('timerDisplay');
@@ -1276,47 +1305,86 @@ function colorCloseness(c1, c2){
   const maxDist = Math.sqrt(255**2 * 3);
   return Math.max(0, 100 * (1 - dist / maxDist));
 }
+function perturbColor(base, maxDelta){
+  const clamp = (v) => Math.max(0, Math.min(255, v));
+  const r = clamp(base.r + Math.round((Math.random() * 2 - 1) * maxDelta));
+  const g = clamp(base.g + Math.round((Math.random() * 2 - 1) * maxDelta));
+  const b = clamp(base.b + Math.round((Math.random() * 2 - 1) * maxDelta));
+  const rgb = { r, g, b };
+  return { hex: rgbToHex(r, g, b), rgb };
+}
 
 function renderColorQuestion(index){
   currentRandomColor = randomColor();
-  const pickerHTML = testIsExpert
-    ? `<div class="hex-input-row">
-         <input type="text" id="hexInput" placeholder="#RRGGBB" maxlength="7">
-         <button id="validateColorBtn">Valider</button>
-       </div>`
-    : `<div class="color-pick-row">
-         <input type="color" id="colorInput" value="#808080">
-         <button id="validateColorBtn">Valider</button>
-       </div>`;
+
+  if(testIsExpert){
+    const decoy1 = perturbColor(currentRandomColor, 55);
+    const decoy2 = perturbColor(currentRandomColor, 55);
+    const options = shuffle([
+      { hex: currentRandomColor.hex, rgb: currentRandomColor },
+      decoy1,
+      decoy2
+    ]);
+    card.innerHTML = `
+      ${timerHTML()}
+      <div class="quiz-progress">Question ${index+5} / ${TOTAL_QUESTIONS}</div>
+      <div class="color-rect" style="background:${currentRandomColor.hex}"></div>
+      <p class="question-text">Quel est le code HTML de cette couleur ?</p>
+      <div class="options">
+        ${options.map((opt,i) => `<button class="opt-btn" data-opt="${i}">${opt.hex.toUpperCase()}</button>`).join('')}
+      </div>
+      <p class="feedback-flash" id="feedback"></p>
+    `;
+    updateTimerDisplay();
+    const buttons = card.querySelectorAll('.opt-btn');
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        buttons.forEach(b => b.classList.add('disabled'));
+        const chosen = options[btn.dataset.opt];
+        const correct = chosen.hex === currentRandomColor.hex;
+        const score = colorCloseness(currentRandomColor, chosen.rgb);
+        colorScores.push(score);
+        if(correct){
+          btn.classList.add('correct');
+          document.getElementById('feedback').textContent = 'Bonne réponse !';
+        } else {
+          btn.classList.add('wrong');
+          buttons.forEach(b => { if(options[b.dataset.opt].hex === currentRandomColor.hex) b.classList.add('correct'); });
+          document.getElementById('feedback').textContent = `Pas tout à fait… (proximité : ${score.toFixed(0)}%)`;
+        }
+        setTimeout(() => {
+          if(testEnded) return;
+          if(index + 1 < NUM_COLOR_QUESTIONS){
+            renderColorQuestion(index + 1);
+          } else {
+            renderNoteSingleQuestion(0);
+          }
+        }, 900);
+      });
+    });
+    return;
+  }
+
   card.innerHTML = `
     ${timerHTML()}
     <div class="quiz-progress">Question ${index+5} / ${TOTAL_QUESTIONS}</div>
     <div class="color-rect" style="background:${currentRandomColor.hex}"></div>
-    <p class="question-text">${testIsExpert ? 'Trouve le code HTML exact de la couleur' : 'Trouve la bonne couleur'}</p>
-    ${pickerHTML}
+    <p class="question-text">Trouve la bonne couleur</p>
+    <div class="color-pick-row">
+      <input type="color" id="colorInput" value="#808080">
+      <button id="validateColorBtn">Valider</button>
+    </div>
     <p class="feedback-flash" id="feedback"></p>
   `;
   updateTimerDisplay();
 
   document.getElementById('validateColorBtn').addEventListener('click', () => {
-    let picked;
-    if(testIsExpert){
-      const raw = document.getElementById('hexInput').value.trim();
-      const valid = /^#?[0-9a-fA-F]{6}$/.test(raw);
-      if(!valid){
-        document.getElementById('feedback').innerHTML = errorLineHTML('Entre un code valide, ex : #A3B5C1');
-        return;
-      }
-      picked = hexToRgb(raw.startsWith('#') ? raw : '#' + raw);
-    } else {
-      picked = hexToRgb(document.getElementById('colorInput').value);
-    }
+    const picked = hexToRgb(document.getElementById('colorInput').value);
     const score = colorCloseness(currentRandomColor, picked);
     colorScores.push(score);
     document.getElementById('feedback').textContent = `Proximité : ${score.toFixed(0)}%`;
     document.getElementById('validateColorBtn').disabled = true;
-    if(document.getElementById('colorInput')) document.getElementById('colorInput').disabled = true;
-    if(document.getElementById('hexInput')) document.getElementById('hexInput').disabled = true;
+    document.getElementById('colorInput').disabled = true;
     setTimeout(() => {
       if(testEnded) return;
       if(index + 1 < NUM_COLOR_QUESTIONS){
@@ -1741,7 +1809,7 @@ function openSheet(b){
 }
 
 overlay.addEventListener('click', (e) => {
-  if(e.target === overlay) overlay.classList.remove('show');
+  if(e.target === overlay && !forceModalChoice) overlay.classList.remove('show');
 });
 
 /* ===================== Verrou de maintenance ===================== */
