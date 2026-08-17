@@ -33,8 +33,11 @@
     font-family:'Inter',sans-serif;
     color:var(--ink);
     display:flex;
+    flex-direction:row;
     align-items:center;
-    justify-content:center;
+    justify-content:space-between;
+    gap:40px;
+    padding:40px 56px;
     position:relative;
     overflow-x:hidden;
   }
@@ -407,15 +410,16 @@
   #validateOrderBtn:hover{ background:var(--accent-dark); }
 
   /* ---------- Colonne Bilan (droite) ---------- */
-  .bilan-column{
-    position:fixed;
-    top:0;
-    bottom:0;
-    right:36px;
-    width:220px;
+  .right-column{
     display:flex;
     flex-direction:column;
-    justify-content:center;
+    gap:20px;
+    width:220px;
+    flex-shrink:0;
+  }
+  .bilan-column{
+    display:flex;
+    flex-direction:column;
     gap:16px;
   }
   .bilan-panel{
@@ -644,10 +648,7 @@
 
   /* ---------- Boîte avis (bas gauche) ---------- */
   .avis-box{
-    position:fixed;
-    left:36px;
-    bottom:36px;
-    width:240px;
+    width:100%;
     border:2px solid #1c1c18;
     border-radius:20px;
     background:#ffffff;
@@ -697,7 +698,7 @@
   }
 
   @media (max-width:760px){
-    .avis-box{ position:static; width:88vw; max-width:520px; margin:24px auto 0; order:3; }
+    .right-column{ width:88vw; max-width:520px; }
   }
 
   /* ---------- Lien "Fonctionnement du site" (sous le formulaire) ---------- */
@@ -850,10 +851,10 @@
   #downloadPdfBtn:hover{ background:var(--accent-dark); }
 
   @media (max-width:760px){
-    .bilan-column{ position:static; width:88vw; max-width:520px; margin-top:24px; order:2; }
+    body{ flex-direction:column; padding:24px 0; gap:24px; }
+    .card-wrap{ order:1; }
+    .right-column{ order:2; margin:0 auto; }
     .bilan-panel{ max-height:220px; }
-    body{ flex-direction:column; padding:24px 0; }
-    .card{ order:1; }
   }
 </style>
 </head>
@@ -863,28 +864,30 @@
     <div class="card" id="card"></div>
   </div>
 
-  <div class="bilan-column">
-    <aside class="bilan-panel">
-      <h2>Bilan</h2>
-      <div class="bilan-list" id="bilanList"></div>
-    </aside>
-    <div class="bilan-search-box">
-      <label for="codeInput">Trouver mon bilan avec mon code bilan</label>
-      <input type="text" id="codeInput" placeholder="Ex : 7K2P9X" maxlength="10">
-      <button id="findCodeBtn">Rechercher</button>
-      <p class="code-msg" id="codeMsg"></p>
+  <div class="right-column">
+    <div class="bilan-column">
+      <aside class="bilan-panel">
+        <h2>Bilan</h2>
+        <div class="bilan-list" id="bilanList"></div>
+      </aside>
+      <div class="bilan-search-box">
+        <label for="codeInput">Trouver mon bilan avec mon code bilan</label>
+        <input type="text" id="codeInput" placeholder="Ex : 7K2P9X" maxlength="10">
+        <button id="findCodeBtn">Rechercher</button>
+        <p class="code-msg" id="codeMsg"></p>
+      </div>
+    </div>
+
+    <div class="avis-box">
+      <h2>avis ou question</h2>
+      <textarea id="avisText" placeholder="blablabla…" maxlength="1000"></textarea>
+      <button id="sendAvisBtn">Envoyer</button>
+      <p class="avis-msg" id="avisMsg"></p>
     </div>
   </div>
 
   <div class="overlay" id="overlay">
     <div class="sheet" id="sheet"></div>
-  </div>
-
-  <div class="avis-box">
-    <h2> avis ou question</h2>
-    <textarea id="avisText" placeholder="blablabla…" maxlength="1000"></textarea>
-    <button id="sendAvisBtn">Envoyer</button>
-    <p class="avis-msg" id="avisMsg"></p>
   </div>
 
 <script>
@@ -1342,7 +1345,7 @@ function renderColorQuestion(index){
         buttons.forEach(b => b.classList.add('disabled'));
         const chosen = options[btn.dataset.opt];
         const correct = chosen.hex === currentRandomColor.hex;
-        const score = colorCloseness(currentRandomColor, chosen.rgb);
+        const score = correct ? 100 : 0;
         colorScores.push(score);
         if(correct){
           btn.classList.add('correct');
@@ -1350,7 +1353,7 @@ function renderColorQuestion(index){
         } else {
           btn.classList.add('wrong');
           buttons.forEach(b => { if(options[b.dataset.opt].hex === currentRandomColor.hex) b.classList.add('correct'); });
-          document.getElementById('feedback').textContent = `Pas tout à fait… (proximité : ${score.toFixed(0)}%)`;
+          document.getElementById('feedback').textContent = 'Pas tout à fait…';
         }
         setTimeout(() => {
           if(testEnded) return;
@@ -1771,7 +1774,7 @@ function openSheet(b){
       <div><span class="label">Date de naissance</span>${b.date ? formatDate(b.date) + ' (' + calcAge(b.date) + ' ans)' : '—'}</div>
       <div><span class="label">Genre</span>${escapeHtml(b.genre)}</div>
       <div><span class="label">Code bilan</span>${escapeHtml(b.code)}</div>
-      ${b.photoUrl ? `<div><span class="label">Photo</span><img src="${b.photoUrl}" alt="Photo" style="display:block;width:48px;height:48px;border-radius:10px;object-fit:cover;border:1.5px solid #ccc;margin-top:2px;"></div>` : ''}
+      ${b.photoUrl ? `<div><span class="label">Photo</span><img src="${b.photoUrl}" alt="Photo" crossorigin="anonymous" style="display:block;width:48px;height:48px;border-radius:10px;object-fit:cover;border:1.5px solid #ccc;margin-top:2px;"></div>` : ''}
     </div>
     <div class="result-block">
       <h3>Connaissance en logos (moyenne)</h3>
@@ -1793,17 +1796,28 @@ function openSheet(b){
   document.getElementById('downloadPdfBtn').addEventListener('click', () => {
     const dlBtn = document.getElementById('downloadPdfBtn');
     const closeX = document.getElementById('closeSheet');
+    const modeTag = sheet.querySelector('.mode-tag');
     dlBtn.style.display = 'none';
     closeX.style.display = 'none';
+    if(modeTag) modeTag.style.visibility = 'hidden';
+    const restore = () => {
+      dlBtn.style.display = 'block';
+      closeX.style.display = 'block';
+      if(modeTag) modeTag.style.visibility = 'visible';
+    };
     html2pdf().set({
       margin: 10,
       filename: `bilan_${b.prenom}_${b.nom}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
+      html2canvas: { scale: 2, useCORS: true, allowTaint: false },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(sheet).save().then(() => {
-      dlBtn.style.display = 'block';
-      closeX.style.display = 'block';
+    }).from(sheet).save().then(restore).catch((err) => {
+      console.error(err);
+      restore();
+      const msg = document.createElement('p');
+      msg.style.cssText = 'text-align:center;font-size:0.8rem;color:#c0342c;margin-top:10px;';
+      msg.innerHTML = errorLineHTML('La génération du PDF a échoué, réessaie.');
+      sheet.appendChild(msg);
     });
   });
 }
@@ -1897,6 +1911,7 @@ checkMaintenance();
 </script>
 </body>
 </html>
+
 
 
 
