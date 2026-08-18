@@ -1774,7 +1774,7 @@ function openSheet(b){
       <div><span class="label">Date de naissance</span>${b.date ? formatDate(b.date) + ' (' + calcAge(b.date) + ' ans)' : '—'}</div>
       <div><span class="label">Genre</span>${escapeHtml(b.genre)}</div>
       <div><span class="label">Code bilan</span>${escapeHtml(b.code)}</div>
-      ${b.photoUrl ? `<div><span class="label">Photo</span><img src="${b.photoUrl}" alt="Photo" crossorigin="anonymous" style="display:block;width:48px;height:48px;border-radius:10px;object-fit:cover;border:1.5px solid #ccc;margin-top:2px;"></div>` : ''}
+      ${b.photoUrl ? `<div><span class="label">Photo</span><img src="${b.photoUrl}" alt="Photo" style="display:block;width:48px;height:48px;border-radius:10px;object-fit:cover;border:1.5px solid #ccc;margin-top:2px;"></div>` : ''}
     </div>
     <div class="result-block">
       <h3>Connaissance en logos (moyenne)</h3>
@@ -1797,28 +1797,56 @@ function openSheet(b){
     const dlBtn = document.getElementById('downloadPdfBtn');
     const closeX = document.getElementById('closeSheet');
     const modeTag = sheet.querySelector('.mode-tag');
-    dlBtn.style.display = 'none';
-    closeX.style.display = 'none';
-    if(modeTag) modeTag.style.visibility = 'hidden';
     const restore = () => {
       dlBtn.style.display = 'block';
       closeX.style.display = 'block';
       if(modeTag) modeTag.style.visibility = 'visible';
     };
-    html2pdf().set({
-      margin: 10,
-      filename: `bilan_${b.prenom}_${b.nom}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, allowTaint: false },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(sheet).save().then(restore).catch((err) => {
-      console.error(err);
+    const showPdfError = (text) => {
       restore();
+      const existing = sheet.querySelector('.pdf-error');
+      if(existing) existing.remove();
       const msg = document.createElement('p');
+      msg.className = 'pdf-error';
       msg.style.cssText = 'text-align:center;font-size:0.8rem;color:#c0342c;margin-top:10px;';
-      msg.innerHTML = errorLineHTML('La génération du PDF a échoué, réessaie.');
+      msg.innerHTML = errorLineHTML(text);
       sheet.appendChild(msg);
-    });
+    };
+
+    if(typeof html2pdf === 'undefined'){
+      showPdfError('Outil PDF indisponible (bloqué par le navigateur ?), réessaie.');
+      return;
+    }
+
+    dlBtn.style.display = 'none';
+    closeX.style.display = 'none';
+    if(modeTag) modeTag.style.visibility = 'hidden';
+
+    const savedScrollX = window.scrollX;
+    const savedScrollY = window.scrollY;
+    window.scrollTo(0, 0);
+    const restoreScroll = () => window.scrollTo(savedScrollX, savedScrollY);
+
+    try{
+      html2pdf().set({
+        margin: 10,
+        filename: `bilan_${b.prenom}_${b.nom}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, allowTaint: false, scrollX: 0, scrollY: 0, windowWidth: document.documentElement.scrollWidth, windowHeight: document.documentElement.scrollHeight },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).from(sheet).save().then(() => {
+        restore();
+        restoreScroll();
+      }).catch((err) => {
+        console.error(err);
+        showPdfError('La génération du PDF a échoué, réessaie.');
+        restoreScroll();
+      });
+    } catch(err){
+      console.error(err);
+      showPdfError('La génération du PDF a échoué, réessaie.');
+      restoreScroll();
+    }
   });
 }
 
@@ -1911,6 +1939,7 @@ checkMaintenance();
 </script>
 </body>
 </html>
+
 
 
 
