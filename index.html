@@ -792,6 +792,7 @@
   .sheet h2{
     text-align:center;
     font-size:1.3rem;
+    margin-top:20px;
     margin-bottom:4px;
   }
   .sheet .subtitle{
@@ -879,8 +880,8 @@
     </div>
 
     <div class="avis-box">
-      <h2>avis ou question</h2>
-      <textarea id="avisText" placeholder="blablabla…" maxlength="1000"></textarea>
+      <h2>Laisser un avis</h2>
+      <textarea id="avisText" placeholder="Ton avis sur le test…" maxlength="1000"></textarea>
       <button id="sendAvisBtn">Envoyer</button>
       <p class="avis-msg" id="avisMsg"></p>
     </div>
@@ -1800,7 +1801,6 @@ function openSheet(b){
     const restore = () => {
       dlBtn.style.display = 'block';
       closeX.style.display = 'block';
-      if(modeTag) modeTag.style.visibility = 'visible';
     };
     const showPdfError = (text) => {
       restore();
@@ -1820,12 +1820,16 @@ function openSheet(b){
 
     dlBtn.style.display = 'none';
     closeX.style.display = 'none';
-    if(modeTag) modeTag.style.visibility = 'hidden';
 
     const savedScrollX = window.scrollX;
     const savedScrollY = window.scrollY;
+    const savedSheetScroll = sheet.scrollTop;
     window.scrollTo(0, 0);
-    const restoreScroll = () => window.scrollTo(savedScrollX, savedScrollY);
+    sheet.scrollTop = 0;
+    const restoreScroll = () => {
+      window.scrollTo(savedScrollX, savedScrollY);
+      sheet.scrollTop = savedSheetScroll;
+    };
 
     try{
       html2pdf().set({
@@ -1939,6 +1943,7 @@ checkMaintenance();
 </script>
 </body>
 </html>
+
 
 
 
