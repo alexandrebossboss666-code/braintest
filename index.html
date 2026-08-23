@@ -152,6 +152,28 @@
     text-decoration:underline;
   }
 
+  /* ---------- Case "Ne pas enregistrer sur le serveur" ---------- */
+  .local-only-field{
+    display:flex;
+    align-items:flex-start;
+    gap:9px;
+    margin-bottom:16px;
+  }
+  .local-only-field input[type="checkbox"]{
+    margin-top:2px;
+    width:16px;
+    height:16px;
+    accent-color:var(--accent-dark);
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .local-only-field label{
+    font-size:0.82rem;
+    font-weight:600;
+    line-height:1.35;
+    cursor:pointer;
+  }
+
   /* ---------- Bouton Mode expert ---------- */
   .expert-row{ margin-bottom:16px; }
   #expertModeBtn{
@@ -169,6 +191,49 @@
   }
   #expertModeBtn.active{
     background:#2f5fa3;
+  }
+
+  /* ---------- Verrou du mode expert ---------- */
+  .expert-lock-wrap{
+    position:relative;
+  }
+  .expert-lock-overlay{
+    position:absolute;
+    inset:0;
+    border-radius:14px;
+    border:1.5px solid #1c1c18;
+    background-image:repeating-linear-gradient(135deg, transparent, transparent 6px, rgba(20,20,18,0.6) 6px, rgba(20,20,18,0.6) 7px);
+    cursor:not-allowed;
+  }
+  .expert-lock-tooltip{
+    position:absolute;
+    bottom:calc(100% + 10px);
+    left:50%;
+    transform:translateX(-50%);
+    background:#2a1414;
+    color:#fff;
+    padding:10px 14px;
+    border-radius:10px;
+    font-size:0.76rem;
+    font-weight:600;
+    line-height:1.35;
+    width:230px;
+    text-align:center;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .15s ease;
+    z-index:10;
+  }
+  .expert-lock-tooltip::after{
+    content:'';
+    position:absolute;
+    top:100%; left:50%;
+    transform:translateX(-50%);
+    border:6px solid transparent;
+    border-top-color:#2a1414;
+  }
+  .expert-lock-overlay:hover .expert-lock-tooltip{
+    opacity:1;
   }
 
   /* ---------- Étiquette de mode (bilan) ---------- */
@@ -851,6 +916,14 @@
   }
   #downloadPdfBtn:hover{ background:var(--accent-dark); }
 
+  .local-only-note{
+    text-align:center;
+    font-size:0.78rem;
+    color:#6b6b67;
+    margin-top:14px;
+    line-height:1.4;
+  }
+
   @media (max-width:760px){
     body{ flex-direction:column; padding:24px 0; gap:24px; }
     .card-wrap{ order:1; }
@@ -1031,6 +1104,14 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
 });
 
+const EXPERT_UNLOCK_KEY = 'reflexion_expert_unlocked';
+function isExpertUnlocked(){
+  return localStorage.getItem(EXPERT_UNLOCK_KEY) === 'true';
+}
+function unlockExpertMode(){
+  localStorage.setItem(EXPERT_UNLOCK_KEY, 'true');
+}
+
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // sans O/0, I/1 pour éviter la confusion
 function generateCode(len = 6){
   let code = '';
@@ -1064,7 +1145,9 @@ let noteCorrectCount = 0;
 let currentRandomColor = null;
 let selectedPhotoFile = null;
 let isExpertMode = false;
+let isLocalOnly = false;
 let testIsExpert = false;
+let testIsLocalOnly = false;
 let expertTimerInterval = null;
 let expertTimeRemaining = EXPERT_TIME_LIMIT;
 let testEnded = false;
@@ -1079,6 +1162,7 @@ function renderRegistration(){
   step = 0;
   selectedPhotoFile = null;
   isExpertMode = false;
+  isLocalOnly = false;
   card.innerHTML = `
     <h1>Test de réflexion</h1>
     <div class="field">
@@ -1103,7 +1187,9 @@ function renderRegistration(){
       </select>
     </div>
     <div class="expert-row">
-      <button type="button" id="expertModeBtn">Mode expert</button>
+      <div class="expert-lock-wrap" id="expertLockWrap">
+        <button type="button" id="expertModeBtn">Mode expert</button>
+      </div>
     </div>
     <div class="photo-field">
       <label>Ajouter une photo</label>
@@ -1111,6 +1197,10 @@ function renderRegistration(){
         <button type="button" class="photo-add-btn" id="photoAddBtn" aria-label="Ajouter une photo"></button>
       </div>
       <input type="file" id="photoInput" accept="image/*" style="display:none">
+    </div>
+    <div class="local-only-field">
+      <input type="checkbox" id="fLocalOnly">
+      <label for="fLocalOnly">Ne pas enregistrer sur le serveur (bilan conservé uniquement dans ce navigateur)</label>
     </div>
     <div class="start-row">
       <button id="startBtn" disabled>Commencer le test</button>
@@ -1124,10 +1214,24 @@ function renderRegistration(){
   document.getElementById('infoRow').addEventListener('click', openInfoSheet);
 
   const expertBtn = document.getElementById('expertModeBtn');
-  expertBtn.addEventListener('click', () => {
-    isExpertMode = !isExpertMode;
-    expertBtn.classList.toggle('active', isExpertMode);
-    expertBtn.textContent = isExpertMode ? 'Mode normal' : 'Mode expert';
+  const expertLockWrap = document.getElementById('expertLockWrap');
+  if(isExpertUnlocked()){
+    expertBtn.addEventListener('click', () => {
+      isExpertMode = !isExpertMode;
+      expertBtn.classList.toggle('active', isExpertMode);
+      expertBtn.textContent = isExpertMode ? 'Mode normal' : 'Mode expert';
+    });
+  } else {
+    expertBtn.style.pointerEvents = 'none';
+    expertLockWrap.insertAdjacentHTML('beforeend', `
+      <div class="expert-lock-overlay" id="expertLockOverlay">
+        <div class="expert-lock-tooltip">Pour déverrouiller ce mode, obtiens le badge Extra dans les 3 catégories (logos, couleurs, notes).</div>
+      </div>
+    `);
+  }
+
+  document.getElementById('fLocalOnly').addEventListener('change', (e) => {
+    isLocalOnly = e.target.checked;
   });
 
   const photoZone = document.getElementById('photoZone');
@@ -1179,6 +1283,7 @@ function renderRegistration(){
     colorScores = [];
     noteCorrectCount = 0;
     testIsExpert = isExpertMode;
+    testIsLocalOnly = isLocalOnly;
     testEnded = false;
     step = 1;
     if(testIsExpert) startExpertTimer();
@@ -1534,7 +1639,7 @@ async function finishTest(){
 
   let photoUrl = null;
   let photoErrorDetail = '';
-  if(selectedPhotoFile){
+  if(selectedPhotoFile && !testIsLocalOnly){
     const ext = (selectedPhotoFile.name.split('.').pop() || 'jpg').toLowerCase();
     const path = `${code}.${ext}`;
     for(let attempt = 1; attempt <= 2; attempt++){
@@ -1568,44 +1673,57 @@ async function finishTest(){
     noteScore: noteCorrectCount,
     photoUrl,
     mode: testIsExpert ? 'expert' : 'normal',
+    localOnly: testIsLocalOnly,
     createdAt: new Date().toISOString()
   };
 
+  const allExtra = logoBadge(logoCorrectCount).cls === 'extra'
+    && colorBadge(avgColor).cls === 'extra'
+    && logoBadge(noteCorrectCount).cls === 'extra';
+  if(allExtra) unlockExpertMode();
+
   let saveError = false;
   let saveErrorDetail = '';
-  try{
-    const { error } = await sb.from('bilans').insert([{
-      code: bilan.code,
-      nom: bilan.nom,
-      prenom: bilan.prenom,
-      date_naissance: bilan.date || null,
-      genre: bilan.genre,
-      logo_score: bilan.logoScore,
-      color_score: bilan.colorScore,
-      note_score: bilan.noteScore,
-      photo_url: bilan.photoUrl,
-      mode: bilan.mode
-    }]);
-    if(error){
-      saveError = true;
-      saveErrorDetail = error.message || JSON.stringify(error);
-      console.error(error);
-    }
-  } catch(e){
-    saveError = true;
-    saveErrorDetail = e.message || String(e);
-    console.error(e);
-  }
 
-  if(photoErrorDetail && !saveError){
-    saveError = true;
-    saveErrorDetail = 'photo non enregistré: ' + photoErrorDetail;
+  if(!testIsLocalOnly){
+    try{
+      const { error } = await sb.from('bilans').insert([{
+        code: bilan.code,
+        nom: bilan.nom,
+        prenom: bilan.prenom,
+        date_naissance: bilan.date || null,
+        genre: bilan.genre,
+        logo_score: bilan.logoScore,
+        color_score: bilan.colorScore,
+        note_score: bilan.noteScore,
+        photo_url: bilan.photoUrl,
+        mode: bilan.mode
+      }]);
+      if(error){
+        saveError = true;
+        saveErrorDetail = error.message || JSON.stringify(error);
+        console.error(error);
+      }
+    } catch(e){
+      saveError = true;
+      saveErrorDetail = e.message || String(e);
+      console.error(e);
+    }
+
+    if(photoErrorDetail && !saveError){
+      saveError = true;
+      saveErrorDetail = 'photo non enregistré: ' + photoErrorDetail;
+    }
   }
 
   addLocalBilan(bilan);
   renderRegistration();
   renderBilanList();
-  showCodeModal(bilan, saveError, saveErrorDetail);
+  if(testIsLocalOnly){
+    showLocalOnlyModal(bilan);
+  } else {
+    showCodeModal(bilan, saveError, saveErrorDetail);
+  }
 }
 
 /* ===================== Cache local des bilans consultés sur cet appareil ===================== */
@@ -1688,6 +1806,18 @@ function showCodeModal(bilan, saveError, saveErrorDetail){
       ${bilan.code}
     </p>
     ${saveError ? `<p style="text-align:center;font-size:0.8rem;color:#c0342c;">${errorLineHTML('Error: ' + (saveErrorDetail || 'raison inconnue'))}</p>` : ''}
+  `;
+  overlay.classList.add('show');
+  document.getElementById('closeSheet').addEventListener('click', () => overlay.classList.remove('show'));
+}
+
+/* ===================== Modale : bilan enregistré localement uniquement ===================== */
+function showLocalOnlyModal(bilan){
+  sheet.innerHTML = `
+    <span class="close-x" id="closeSheet">✕</span>
+    <h2>Bilan enregistré</h2>
+    <p class="subtitle">Merci ${escapeHtml(bilan.prenom)} !</p>
+    <p class="local-only-note">Votre test est enregistré dans votre navigateur. Si vous le supprimez, il ne sera plus trouvable.</p>
   `;
   overlay.classList.add('show');
   document.getElementById('closeSheet').addEventListener('click', () => overlay.classList.remove('show'));
@@ -1943,6 +2073,7 @@ checkMaintenance();
 </script>
 </body>
 </html>
+
 
 
 
