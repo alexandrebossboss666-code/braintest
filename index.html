@@ -1834,7 +1834,7 @@ function renderBilanList(){
     <div class="bilan-item" data-code="${b.code}">
       <span class="trash" data-del="${b.code}" title="Supprimer">🗑</span>
       ${escapeHtml(b.prenom)}
-      <span class="sub">${escapeHtml(b.code)}</span>
+      ${b.localOnly ? '' : `<span class="sub">${escapeHtml(b.code)}</span>`}
     </div>
   `).join('');
 
@@ -1904,7 +1904,7 @@ function openSheet(b){
       <div><span class="label">Prénom</span>${escapeHtml(b.prenom)}</div>
       <div><span class="label">Date de naissance</span>${b.date ? formatDate(b.date) + ' (' + calcAge(b.date) + ' ans)' : '—'}</div>
       <div><span class="label">Genre</span>${escapeHtml(b.genre)}</div>
-      <div><span class="label">Code bilan</span>${escapeHtml(b.code)}</div>
+      ${b.localOnly ? '' : `<div><span class="label">Code bilan</span>${escapeHtml(b.code)}</div>`}
       ${b.photoUrl ? `<div><span class="label">Photo</span><img src="${b.photoUrl}" alt="Photo" style="display:block;width:48px;height:48px;border-radius:10px;object-fit:cover;border:1.5px solid #ccc;margin-top:2px;"></div>` : ''}
     </div>
     <div class="result-block">
@@ -2073,6 +2073,7 @@ checkMaintenance();
 </script>
 </body>
 </html>
+
 
 
 
