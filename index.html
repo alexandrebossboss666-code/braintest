@@ -1966,11 +1966,6 @@ async function finishTest(){
     createdAt: new Date().toISOString()
   };
 
-  const allExtra = logoBadge(logoCorrectCount).cls === 'extra'
-    && colorBadge(avgColor).cls === 'extra'
-    && logoBadge(noteCorrectCount).cls === 'extra';
-  if(allExtra) unlockExpertMode();
-
   let saveError = false;
   let saveErrorDetail = '';
 
