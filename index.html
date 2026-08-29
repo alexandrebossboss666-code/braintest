@@ -224,6 +224,12 @@
     transition:opacity .15s ease;
     z-index:10;
   }
+  .expert-lock-tooltip a{
+    color:var(--accent);
+    text-decoration:underline;
+    font-weight:700;
+  }
+  .expert-lock-tooltip a:hover{ color:var(--accent-dark); }
   .expert-lock-tooltip::after{
     content:'';
     position:absolute;
@@ -232,8 +238,75 @@
     border:6px solid transparent;
     border-top-color:#2a1414;
   }
-  .expert-lock-overlay:hover .expert-lock-tooltip{
+  .expert-lock-tooltip.show{
     opacity:1;
+    pointer-events:auto;
+  }
+
+  /* ---------- Déverrouillage par code PIN ---------- */
+  .expert-code-box{
+    margin-top:10px;
+  }
+  .expert-code-box label{
+    display:block;
+    font-size:0.8rem;
+    font-weight:600;
+    margin-bottom:6px;
+  }
+  .expert-code-row{
+    display:flex;
+    gap:8px;
+  }
+  .expert-code-row input{
+    flex:1;
+    min-width:0;
+    padding:9px 10px;
+    border-radius:10px;
+    border:1.5px solid #9b9b96;
+    background:#fbfbfa;
+    font-family:'Space Grotesk',sans-serif;
+    font-size:0.95rem;
+    text-align:center;
+    letter-spacing:0.12em;
+  }
+  .expert-code-row input:focus{
+    outline:2px solid var(--accent-dark);
+    outline-offset:1px;
+  }
+  .expert-code-row button{
+    border:none;
+    border-radius:10px;
+    padding:9px 16px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:0.85rem;
+    cursor:pointer;
+    background:var(--accent);
+    color:#3a2408;
+    flex-shrink:0;
+  }
+  .expert-code-row button:hover{ background:var(--accent-dark); }
+  .expert-unlock-toast{
+    position:fixed;
+    top:24px;
+    left:50%;
+    transform:translateX(-50%) translateY(-16px);
+    background:var(--bonne);
+    color:#153c0c;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.9rem;
+    padding:14px 22px;
+    border-radius:14px;
+    box-shadow:0 10px 24px rgba(0,0,0,0.18);
+    z-index:100;
+    opacity:0;
+    transition:opacity .25s ease, transform .25s ease;
+    pointer-events:none;
+  }
+  .expert-unlock-toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
   }
 
   /* ---------- Étiquette de mode (bilan) ---------- */
@@ -1124,6 +1197,17 @@ function isExpertUnlocked(){
 function unlockExpertMode(){
   localStorage.setItem(EXPERT_UNLOCK_KEY, 'true');
 }
+function showExpertUnlockToast(text){
+  const toast = document.createElement('div');
+  toast.className = 'expert-unlock-toast';
+  toast.textContent = text;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
 
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // sans O/0, I/1 pour éviter la confusion
 function generateCode(len = 6){
@@ -1203,6 +1287,15 @@ function renderRegistration(){
       <div class="expert-lock-wrap" id="expertLockWrap">
         <button type="button" id="expertModeBtn">Mode expert</button>
       </div>
+      ${isExpertUnlocked() ? '' : `
+      <div class="expert-code-box" id="expertCodeBox">
+        <label for="expertCodeInput">Tu as reçu un code par email ?</label>
+        <div class="expert-code-row">
+          <input type="text" id="expertCodeInput" placeholder="Code à 6 chiffres" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+          <button type="button" id="expertCodeBtn">Valider</button>
+        </div>
+        <p class="code-msg" id="expertCodeMsg"></p>
+      </div>`}
     </div>
     <div class="photo-field">
       <label>Ajouter une photo</label>
@@ -1238,9 +1331,90 @@ function renderRegistration(){
     expertBtn.style.pointerEvents = 'none';
     expertLockWrap.insertAdjacentHTML('beforeend', `
       <div class="expert-lock-overlay" id="expertLockOverlay">
-        <div class="expert-lock-tooltip">Pour déverrouiller ce mode, obtiens le badge Extra dans les 3 catégories (logos, couleurs, notes).</div>
+        <div class="expert-lock-tooltip" id="expertLockTooltip">
+          Pour débloquer ce mode, réussis <a href="https://learningapps.org/37147033" target="_blank" rel="noopener noreferrer">ce test</a>, puis récupère ton code par email.
+        </div>
       </div>
     `);
+
+    const expertLockOverlay = document.getElementById('expertLockOverlay');
+    const expertLockTooltip = document.getElementById('expertLockTooltip');
+    let expertTooltipHideTimeout;
+    const showExpertTooltip = () => {
+      clearTimeout(expertTooltipHideTimeout);
+      expertLockTooltip.classList.add('show');
+    };
+    const scheduleHideExpertTooltip = () => {
+      expertTooltipHideTimeout = setTimeout(() => expertLockTooltip.classList.remove('show'), 200);
+    };
+    expertLockOverlay.addEventListener('mouseenter', showExpertTooltip);
+    expertLockOverlay.addEventListener('mouseleave', scheduleHideExpertTooltip);
+    expertLockOverlay.addEventListener('click', showExpertTooltip);
+    expertLockTooltip.addEventListener('mouseenter', showExpertTooltip);
+    expertLockTooltip.addEventListener('mouseleave', scheduleHideExpertTooltip);
+
+    const expertCodeBox = document.getElementById('expertCodeBox');
+    document.getElementById('expertCodeBtn').addEventListener('click', async () => {
+      const input = document.getElementById('expertCodeInput');
+      const btn = document.getElementById('expertCodeBtn');
+      const msg = document.getElementById('expertCodeMsg');
+      const code = input.value.trim();
+
+      if(!code){
+        msg.className = 'code-msg error';
+        msg.textContent = 'Entre le code reçu par email.';
+        return;
+      }
+
+      msg.className = 'code-msg';
+      msg.textContent = 'Vérification…';
+      btn.disabled = true;
+      input.disabled = true;
+
+      try{
+        const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        const { data, error } = await sb.from('expert_codes')
+          .select('*')
+          .eq('code', code)
+          .eq('used', false)
+          .gte('created_at', tenMinAgo)
+          .maybeSingle();
+
+        if(error){
+          msg.className = 'code-msg error';
+          msg.innerHTML = errorLineHTML('Erreur : ' + (error.message || 'inconnue'));
+          btn.disabled = false;
+          input.disabled = false;
+          return;
+        }
+        if(!data){
+          msg.className = 'code-msg error';
+          msg.innerHTML = errorLineHTML('Code invalide ou expiré.');
+          btn.disabled = false;
+          input.disabled = false;
+          return;
+        }
+
+        // Code correct : on le marque comme utilisé et le champ disparaît définitivement
+        await sb.from('expert_codes').update({ used: true }).eq('id', data.id);
+        unlockExpertMode();
+        expertCodeBox.remove();
+        showExpertUnlockToast('Mode expert débloqué !');
+
+        expertLockOverlay.remove();
+        expertBtn.style.pointerEvents = '';
+        expertBtn.addEventListener('click', () => {
+          isExpertMode = !isExpertMode;
+          expertBtn.classList.toggle('active', isExpertMode);
+          expertBtn.textContent = isExpertMode ? 'Mode normal' : 'Mode expert';
+        });
+      } catch(e){
+        msg.className = 'code-msg error';
+        msg.innerHTML = errorLineHTML('Erreur de connexion, réessaie.');
+        btn.disabled = false;
+        input.disabled = false;
+      }
+    });
   }
 
   document.getElementById('fLocalOnly').addEventListener('change', (e) => {
@@ -2188,15 +2362,3 @@ checkMaintenance();
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
