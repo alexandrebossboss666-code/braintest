@@ -434,6 +434,7 @@
     border:2px solid #1c1c18;
     border-radius:12px;
     padding:10px 14px;
+    transition:box-shadow .15s ease, opacity .15s ease;
   }
   .note-band .note-name{
     font-family:'Space Grotesk',sans-serif;
@@ -441,23 +442,35 @@
     color:#0f2233;
     letter-spacing:0.02em;
   }
-  .note-band .arrows{
+  .note-band .drag-handle{
     display:flex;
-    gap:8px;
-  }
-  .note-band .arrows button{
-    border:none;
-    background:#ffffffaa;
+    align-items:center;
+    justify-content:center;
+    width:30px;
+    height:30px;
     border-radius:8px;
-    width:26px;
-    height:26px;
-    cursor:pointer;
-    font-size:0.8rem;
-    line-height:1;
+    background:#ffffffaa;
     color:#0f2233;
+    font-size:1rem;
+    line-height:1;
+    letter-spacing:2px;
+    cursor:grab;
+    touch-action:none;
+    user-select:none;
   }
-  .note-band .arrows button:hover{ background:#ffffff; }
-  .note-band .arrows button:disabled{ opacity:0.3; cursor:default; }
+  .note-band .drag-handle:hover{ background:#ffffff; }
+  .note-band.dragging{
+    box-shadow:0 14px 26px rgba(0,0,0,0.28);
+    z-index:1000;
+  }
+  .note-band.dragging .drag-handle{ cursor:grabbing; }
+  .note-band.drop-locked .drag-handle{ cursor:default; opacity:0.3; pointer-events:none; }
+  .note-band-placeholder{
+    border:2px dashed var(--accent-dark);
+    border-radius:12px;
+    background:rgba(255,186,107,0.15);
+    box-sizing:border-box;
+  }
 
   #validateOrderBtn{
     display:block;
@@ -953,8 +966,8 @@
     </div>
 
     <div class="avis-box">
-      <h2>avis ou question</h2>
-      <textarea id="avisText" placeholder="blablabla…" maxlength="1000"></textarea>
+      <h2>Laisser un avis</h2>
+      <textarea id="avisText" placeholder="Ton avis sur le test…" maxlength="1000"></textarea>
       <button id="sendAvisBtn">Envoyer</button>
       <p class="avis-msg" id="avisMsg"></p>
     </div>
@@ -1556,6 +1569,113 @@ function renderNoteSingleQuestion(index){
 }
 
 /* ===================== Questions mélodie / suite d'accords (11-12) ===================== */
+function enableDragReorder(wrap, setOrder){
+  let dragState = null;
+
+  function movePlaceholder(after){
+    const { placeholder } = dragState;
+    const siblings = Array.from(wrap.querySelectorAll('.note-band:not(.dragging)'));
+    const firstRects = new Map();
+    siblings.forEach(el => firstRects.set(el, el.getBoundingClientRect()));
+
+    if(after){
+      wrap.insertBefore(placeholder, after);
+    } else {
+      wrap.appendChild(placeholder);
+    }
+
+    siblings.forEach(el => {
+      const first = firstRects.get(el);
+      const last = el.getBoundingClientRect();
+      const deltaY = first.top - last.top;
+      if(deltaY){
+        el.style.transition = 'none';
+        el.style.transform = `translateY(${deltaY}px)`;
+        requestAnimationFrame(() => {
+          el.style.transition = 'transform 0.2s ease';
+          el.style.transform = '';
+        });
+      }
+    });
+  }
+
+  wrap.querySelectorAll('.note-band').forEach(band => {
+    const handle = band.querySelector('.drag-handle');
+
+    handle.addEventListener('pointerdown', (e) => {
+      const rect = band.getBoundingClientRect();
+      const placeholder = document.createElement('div');
+      placeholder.className = 'note-band-placeholder';
+      placeholder.style.height = rect.height + 'px';
+      wrap.insertBefore(placeholder, band);
+
+      band.classList.add('dragging');
+      band.style.position = 'fixed';
+      band.style.left = rect.left + 'px';
+      band.style.top = rect.top + 'px';
+      band.style.width = rect.width + 'px';
+      document.body.appendChild(band);
+
+      dragState = { band, placeholder, offsetY: e.clientY - rect.top, lastAfter: undefined };
+      handle.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    handle.addEventListener('pointermove', (e) => {
+      if(!dragState || dragState.band !== band) return;
+      const rectHeight = band.getBoundingClientRect().height;
+      const top = e.clientY - dragState.offsetY;
+      band.style.top = top + 'px';
+
+      const centerY = top + rectHeight / 2;
+      const others = Array.from(wrap.querySelectorAll('.note-band:not(.dragging)'));
+      const after = others.find(sib => {
+        const r = sib.getBoundingClientRect();
+        return centerY < r.top + r.height / 2;
+      }) || null;
+
+      if(after !== dragState.lastAfter){
+        dragState.lastAfter = after;
+        movePlaceholder(after);
+      }
+    });
+
+    const endDrag = () => {
+      if(!dragState || dragState.band !== band) return;
+      const { placeholder } = dragState;
+      const beforeRect = band.getBoundingClientRect();
+
+      wrap.insertBefore(band, placeholder);
+      wrap.removeChild(placeholder);
+      band.style.position = '';
+      band.style.left = '';
+      band.style.top = '';
+      band.style.width = '';
+
+      const afterRect = band.getBoundingClientRect();
+      const deltaX = beforeRect.left - afterRect.left;
+      const deltaY = beforeRect.top - afterRect.top;
+      band.style.transition = 'none';
+      band.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+      band.classList.remove('dragging');
+      requestAnimationFrame(() => {
+        band.style.transition = 'transform 0.2s ease, box-shadow 0.2s ease';
+        band.style.transform = '';
+      });
+      band.addEventListener('transitionend', function handler(){
+        band.style.transition = '';
+        band.removeEventListener('transitionend', handler);
+      });
+
+      dragState = null;
+      const newOrder = Array.from(wrap.querySelectorAll('.note-band')).map(b => b.dataset.note);
+      setOrder(newOrder);
+    };
+    handle.addEventListener('pointerup', endDrag);
+    handle.addEventListener('pointercancel', endDrag);
+  });
+}
+
 function renderNoteSequenceQuestion(index){
   const pool = testIsExpert ? CHORD_NAMES : NOTE_NAMES;
   const targetSequence = shuffle(pool).slice(0, 4);
@@ -1570,14 +1690,12 @@ function renderNoteSequenceQuestion(index){
       <div class="quiz-progress">Question ${LOGO_QUESTIONS_NORMAL.length + NUM_COLOR_QUESTIONS + NUM_NOTE_SINGLE_QUESTIONS + index + 1} / ${TOTAL_QUESTIONS}</div>
       <div class="play-wrap"><div class="play-btn" id="playBtn" role="button" aria-label="Écouter"></div></div>
       <p class="question-text">${testIsExpert ? 'Remets les accords dans le bon ordre' : 'Remets les notes dans le bon ordre'}</p>
+      <p class="feedback-flash" style="margin-bottom:6px;color:#6b6b67;">Glisse les étiquettes pour les réordonner</p>
       <div class="note-bands" id="bandsWrap">
-        ${bandOrder.map((n,i) => `
+        ${bandOrder.map((n) => `
           <div class="note-band" data-note="${n}">
             <span class="note-name">${n}</span>
-            <span class="arrows">
-              <button data-dir="up" data-idx="${i}" ${i===0 ? 'disabled' : ''}>▲</button>
-              <button data-dir="down" data-idx="${i}" ${i===bandOrder.length-1 ? 'disabled' : ''}>▼</button>
-            </span>
+            <span class="drag-handle" aria-label="Glisser pour réordonner">⠿</span>
           </div>
         `).join('')}
       </div>
@@ -1588,14 +1706,10 @@ function renderNoteSequenceQuestion(index){
     document.getElementById('playBtn').addEventListener('click', () => {
       if(testIsExpert) playChordSequence(targetSequence); else playSequence(targetSequence);
     });
-    card.querySelectorAll('.arrows button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const i = parseInt(btn.dataset.idx, 10);
-        const j = btn.dataset.dir === 'up' ? i - 1 : i + 1;
-        [bandOrder[i], bandOrder[j]] = [bandOrder[j], bandOrder[i]];
-        draw();
-      });
-    });
+
+    const bandsWrap = document.getElementById('bandsWrap');
+    enableDragReorder(bandsWrap, (newOrder) => { bandOrder = newOrder; });
+
     document.getElementById('validateOrderBtn').addEventListener('click', () => {
       const correct = bandOrder.join() === targetSequence.join();
       if(correct){
@@ -1605,7 +1719,8 @@ function renderNoteSequenceQuestion(index){
         document.getElementById('feedback').textContent = `Pas tout à fait… l'ordre était : ${targetSequence.join(' - ')}`;
       }
       document.getElementById('validateOrderBtn').disabled = true;
-      card.querySelectorAll('.arrows button').forEach(b => b.disabled = true);
+      bandsWrap.classList.add('drop-locked');
+      bandsWrap.querySelectorAll('.note-band').forEach(b => b.classList.add('drop-locked'));
       setTimeout(() => {
         if(testEnded) return;
         if(index + 1 < NUM_NOTE_SEQUENCE_QUESTIONS){
@@ -2073,6 +2188,7 @@ checkMaintenance();
 </script>
 </body>
 </html>
+
 
 
 
