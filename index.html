@@ -315,6 +315,24 @@
     transform:translateX(-50%) translateY(0);
   }
 
+  /* ---------- Animation d'explosion du verrou hachuré ---------- */
+  @keyframes lock-shatter-particle{
+    0%   { opacity:1; transform:translate(0,0) rotate(0deg); }
+    22%  { opacity:1; transform:translate(var(--dx1), var(--dy1)) rotate(var(--rot1)); }
+    100% { opacity:0; transform:translate(var(--dx2), var(--dy2)) rotate(var(--rot2)); }
+  }
+  .lock-shatter-particle{
+    position:absolute;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:800;
+    color:#1c1c18;
+    pointer-events:none;
+    will-change:transform, opacity;
+    animation-name:lock-shatter-particle;
+    animation-timing-function:cubic-bezier(.33,0,.67,1);
+    animation-fill-mode:forwards;
+  }
+
   /* ---------- Étiquette de mode (bilan) ---------- */
   .mode-tag{
     position:absolute;
@@ -1215,6 +1233,62 @@ function showExpertUnlockToast(text){
   }, 3000);
 }
 
+function shatterLockOverlay(overlayEl){
+  if(!overlayEl){ return; }
+  const rect = overlayEl.getBoundingClientRect();
+
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.left = rect.left + 'px';
+  container.style.top = rect.top + 'px';
+  container.style.width = rect.width + 'px';
+  container.style.height = rect.height + 'px';
+  container.style.pointerEvents = 'none';
+  container.style.zIndex = '2000';
+  document.body.appendChild(container);
+
+  const particleCount = 24;
+  for(let i = 0; i < particleCount; i++){
+    const p = document.createElement('span');
+    p.className = 'lock-shatter-particle';
+    p.textContent = '/';
+    p.style.left = (Math.random() * rect.width) + 'px';
+    p.style.top = (Math.random() * rect.height) + 'px';
+    p.style.fontSize = (14 + Math.random() * 16) + 'px';
+
+    // Phase 1 : explosion vers l'extérieur (petite impulsion vers le haut)
+    const angle = Math.random() * Math.PI * 2;
+    const burst = 25 + Math.random() * 45;
+    const dx1 = Math.cos(angle) * burst;
+    const dy1 = Math.sin(angle) * burst - 25;
+
+    // Phase 2 : la gravité prend le dessus, tout retombe
+    const dx2 = dx1 + (Math.random() - 0.5) * 50;
+    const dy2 = dy1 + 150 + Math.random() * 130;
+
+    const rot1 = (Math.random() - 0.5) * 200;
+    const rot2 = rot1 + (Math.random() - 0.5) * 400;
+
+    p.style.setProperty('--dx1', dx1.toFixed(1) + 'px');
+    p.style.setProperty('--dy1', dy1.toFixed(1) + 'px');
+    p.style.setProperty('--dx2', dx2.toFixed(1) + 'px');
+    p.style.setProperty('--dy2', dy2.toFixed(1) + 'px');
+    p.style.setProperty('--rot1', rot1.toFixed(0) + 'deg');
+    p.style.setProperty('--rot2', rot2.toFixed(0) + 'deg');
+
+    const duration = 700 + Math.random() * 450;
+    p.style.animationDuration = duration.toFixed(0) + 'ms';
+    p.style.animationDelay = (Math.random() * 60) + 'ms';
+
+    container.appendChild(p);
+  }
+
+  overlayEl.style.transition = 'opacity 0.12s ease';
+  overlayEl.style.opacity = '0';
+  setTimeout(() => overlayEl.remove(), 120);
+  setTimeout(() => container.remove(), 1350);
+}
+
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // sans O/0, I/1 pour éviter la confusion
 function generateCode(len = 6){
   let code = '';
@@ -1339,7 +1413,7 @@ function renderRegistration(){
     expertLockWrap.insertAdjacentHTML('beforeend', `
       <div class="expert-lock-overlay" id="expertLockOverlay">
         <div class="expert-lock-tooltip" id="expertLockTooltip">
-          Pour débloquer ce mode, réussis <a href="https://learningapps.org/watch?v=pf4kvxhej26" target="_blank" rel="noopener noreferrer">ce test</a>, puis récupère ton code par email.
+          Pour débloquer ce mode, réussis <a href="https://learningapps.org/37147033" target="_blank" rel="noopener noreferrer">ce test</a>, puis récupère ton code par email.
         </div>
       </div>
     `);
@@ -1408,7 +1482,7 @@ function renderRegistration(){
         expertCodeBox.remove();
         showExpertUnlockToast('Mode expert débloqué !');
 
-        expertLockOverlay.remove();
+        shatterLockOverlay(expertLockOverlay);
         expertBtn.style.pointerEvents = '';
         expertBtn.addEventListener('click', () => {
           isExpertMode = !isExpertMode;
@@ -2410,3 +2484,4 @@ setInterval(checkMaintenance, 20000);
 </script>
 </body>
 </html>
+
