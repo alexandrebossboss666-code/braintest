@@ -2051,6 +2051,16 @@ async function finishTest(){
     createdAt: new Date().toISOString()
   };
 
+  // Condition d'accès à la page email : 3 badges Extra (logos, couleurs, notes) en mode normal uniquement
+  if(!testIsExpert){
+    const allExtra = logoBadge(logoCorrectCount).cls === 'extra'
+      && colorBadge(avgColor).cls === 'extra'
+      && logoBadge(noteCorrectCount).cls === 'extra';
+    if(allExtra){
+      localStorage.setItem('reflexion_triple_extra_normal', 'true');
+    }
+  }
+
   let saveError = false;
   let saveErrorDetail = '';
 
@@ -2484,4 +2494,3 @@ setInterval(checkMaintenance, 20000);
 </script>
 </body>
 </html>
-
