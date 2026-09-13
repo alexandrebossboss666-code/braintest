@@ -333,16 +333,29 @@
     animation-fill-mode:forwards;
   }
 
-  /* ---------- Étiquette de mode (bilan) ---------- */
+  /* ---------- Étiquette de mode (bilan), en ruban diagonal dans le coin ---------- */
+  .mode-tag-frame{
+    position:absolute;
+    top:0; left:0;
+    width:100px;
+    height:100px;
+    overflow:hidden;
+    pointer-events:none;
+    z-index:5;
+  }
   .mode-tag{
     position:absolute;
-    top:14px; left:16px;
-    padding:5px 12px;
-    border-radius:10px;
+    top:20px;
+    left:-34px;
+    width:150px;
+    transform:rotate(-45deg);
+    text-align:center;
+    padding:5px 0;
     font-family:'Space Grotesk',sans-serif;
     font-weight:700;
     font-size:0.7rem;
     color:#fff;
+    box-shadow:0 2px 6px rgba(0,0,0,0.15);
   }
   .mode-tag.normal{ background:#2f5fa3; }
   .mode-tag.expert{ background:#c0342c; }
@@ -1413,7 +1426,7 @@ function renderRegistration(){
     expertLockWrap.insertAdjacentHTML('beforeend', `
       <div class="expert-lock-overlay" id="expertLockOverlay">
         <div class="expert-lock-tooltip" id="expertLockTooltip">
-          Pour débloquer ce mode, obtient trois badges expert dans les trois domaines est réussis <a href="https://learningapps.org/watch?v=pf4kvxhej26" target="_blank" rel="noopener noreferrer">ce test</a>, puis récupère ton code par email.
+          Pour débloquer ce mode, réussis <a href="https://learningapps.org/watch?v=pf4kvxhej26" target="_blank" rel="noopener noreferrer">ce test</a>, obtiens le badge Extra dans les 3 domaines (logos, couleurs, notes) en mode normal, puis récupère ton code par email.
         </div>
       </div>
     `);
@@ -2275,7 +2288,7 @@ function openSheet(b){
   const mode = b.mode === 'expert' ? 'expert' : 'normal';
   sheet.innerHTML = `
     <span class="close-x" id="closeSheet">✕</span>
-    <span class="mode-tag ${mode}">${mode === 'expert' ? 'Mode expert' : 'Mode normal'}</span>
+    <div class="mode-tag-frame"><span class="mode-tag ${mode}">${mode === 'expert' ? 'Mode expert' : 'Mode normal'}</span></div>
     <h2>Récapitulatif</h2>
     <p class="subtitle">Test de réflexion</p>
     <div class="info-grid">
@@ -2494,3 +2507,4 @@ setInterval(checkMaintenance, 20000);
 </script>
 </body>
 </html>
+
