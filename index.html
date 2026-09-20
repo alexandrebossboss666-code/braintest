@@ -1341,44 +1341,8 @@ let testIsLocalOnly = false;
 let expertTimerInterval = null;
 let expertTimeRemaining = EXPERT_TIME_LIMIT;
 let testEnded = false;
-let activeSessionId = null;
-let activeSessionHeartbeat = null;
 
 const card = document.getElementById('card');
-
-/* ===================== Présence : signale qu'un test est en cours pour l'admin ===================== */
-async function startActiveSession(){
-  try{
-    const { data, error } = await sb.from('active_sessions').insert([{}]).select().single();
-    if(!error && data){
-      activeSessionId = data.id;
-      clearInterval(activeSessionHeartbeat);
-      activeSessionHeartbeat = setInterval(sendSessionHeartbeat, 20000);
-    }
-  } catch(e){
-    console.error(e);
-  }
-}
-async function sendSessionHeartbeat(){
-  if(!activeSessionId) return;
-  try{
-    await sb.from('active_sessions').update({ last_seen: new Date().toISOString() }).eq('id', activeSessionId);
-  } catch(e){
-    console.error(e);
-  }
-}
-async function endActiveSession(){
-  if(!activeSessionId) return;
-  const id = activeSessionId;
-  activeSessionId = null;
-  clearInterval(activeSessionHeartbeat);
-  activeSessionHeartbeat = null;
-  try{
-    await sb.from('active_sessions').delete().eq('id', id);
-  } catch(e){
-    console.error(e);
-  }
-}
 const bilanList = document.getElementById('bilanList');
 const overlay = document.getElementById('overlay');
 const sheet = document.getElementById('sheet');
@@ -1603,7 +1567,6 @@ function renderRegistration(){
     testIsLocalOnly = isLocalOnly;
     testEnded = false;
     step = 1;
-    startActiveSession();
     if(testIsExpert) startExpertTimer();
     renderLogoQuestion(0);
   });
@@ -1646,7 +1609,6 @@ function showTimeUpModal(){
     overlay.classList.remove('show');
     testEnded = true;
     clearInterval(expertTimerInterval);
-    endActiveSession();
     renderRegistration();
   });
   document.getElementById('replayBtn').addEventListener('click', () => {
@@ -2059,7 +2021,6 @@ function renderLoadingScreen(){
 async function finishTest(){
   clearInterval(expertTimerInterval);
   testEnded = true;
-  endActiveSession();
   const avgColor = colorScores.length ? colorScores.reduce((a,b)=>a+b,0) / colorScores.length : 0;
   const code = generateCode();
 
@@ -2546,6 +2507,3 @@ setInterval(checkMaintenance, 20000);
 </script>
 </body>
 </html>
-
-
-
