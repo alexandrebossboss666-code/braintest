@@ -33,13 +33,18 @@
     font-family:'Inter',sans-serif;
     color:var(--ink);
     display:flex;
-    flex-direction:row;
     align-items:center;
-    justify-content:space-between;
-    gap:40px;
-    padding:40px 56px;
+    justify-content:center;
+    padding:40px 24px;
     position:relative;
     overflow-x:hidden;
+  }
+  .page-wrap{
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    gap:40px;
+    max-width:860px;
   }
   h1,h2,.display{
     font-family:'Space Grotesk',sans-serif;
@@ -602,7 +607,7 @@
     display:flex;
     flex-direction:column;
     gap:20px;
-    width:220px;
+    width:260px;
     flex-shrink:0;
   }
   .bilan-column{
@@ -1048,7 +1053,8 @@
   }
 
   @media (max-width:760px){
-    body{ flex-direction:column; padding:24px 0; gap:24px; }
+    body{ padding:24px 12px; }
+    .page-wrap{ flex-direction:column; gap:24px; max-width:100%; }
     .card-wrap{ order:1; }
     .right-column{ order:2; margin:0 auto; }
     .bilan-panel{ max-height:220px; }
@@ -1057,29 +1063,31 @@
 </head>
 <body>
 
-  <div class="card-wrap" id="cardWrap">
-    <div class="card" id="card"></div>
-  </div>
-
-  <div class="right-column">
-    <div class="bilan-column">
-      <aside class="bilan-panel">
-        <h2>Bilan</h2>
-        <div class="bilan-list" id="bilanList"></div>
-      </aside>
-      <div class="bilan-search-box">
-        <label for="codeInput">Trouver mon bilan avec mon code bilan</label>
-        <input type="text" id="codeInput" placeholder="Ex : 7K2P9X" maxlength="10">
-        <button id="findCodeBtn">Rechercher</button>
-        <p class="code-msg" id="codeMsg"></p>
-      </div>
+  <div class="page-wrap">
+    <div class="card-wrap" id="cardWrap">
+      <div class="card" id="card"></div>
     </div>
 
-    <div class="avis-box">
-      <h2>Laisser un avis</h2>
-      <textarea id="avisText" placeholder="Ton avis sur le test…" maxlength="1000"></textarea>
-      <button id="sendAvisBtn">Envoyer</button>
-      <p class="avis-msg" id="avisMsg"></p>
+    <div class="right-column">
+      <div class="bilan-column">
+        <aside class="bilan-panel">
+          <h2>Bilan</h2>
+          <div class="bilan-list" id="bilanList"></div>
+        </aside>
+        <div class="bilan-search-box">
+          <label for="codeInput">Trouver mon bilan avec mon code bilan</label>
+          <input type="text" id="codeInput" placeholder="Ex : 7K2P9X" maxlength="10">
+          <button id="findCodeBtn">Rechercher</button>
+          <p class="code-msg" id="codeMsg"></p>
+        </div>
+      </div>
+
+      <div class="avis-box">
+        <h2>Laisser un avis</h2>
+        <textarea id="avisText" placeholder="Ton avis sur le test…" maxlength="1000"></textarea>
+        <button id="sendAvisBtn">Envoyer</button>
+        <p class="avis-msg" id="avisMsg"></p>
+      </div>
     </div>
   </div>
 
@@ -2507,3 +2515,4 @@ setInterval(checkMaintenance, 20000);
 </script>
 </body>
 </html>
+
