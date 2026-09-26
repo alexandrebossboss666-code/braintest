@@ -32,9 +32,7 @@
     background:#ffffff;
     font-family:'Inter',sans-serif;
     color:var(--ink);
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    display:block;
     padding:40px 24px;
     position:relative;
     overflow-x:hidden;
@@ -45,6 +43,7 @@
     align-items:center;
     gap:40px;
     max-width:860px;
+    margin:0 auto;
   }
   .page-wrap.edit-active,
   .page-wrap.custom-layout{
@@ -52,6 +51,7 @@
     display:block;
     width:100%;
     max-width:1100px;
+    margin:0 auto;
   }
 
   /* ---------- Mode édition (déplacement libre, ordinateur/tablette) ---------- */
@@ -90,12 +90,21 @@
   .drag-wrap.dragging .drag-handle-bar{
     cursor:grabbing;
   }
-  .edit-mode-btn{
+  .edit-mode-controls{
     display:none;
     position:fixed;
-    bottom:24px;
+    top:50%;
     right:24px;
+    transform:translateY(-50%);
     z-index:40;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:10px;
+  }
+  @media (min-width:761px){
+    .edit-mode-controls{ display:flex; }
+  }
+  .edit-mode-btn{
     border:none;
     border-radius:14px;
     padding:12px 20px;
@@ -106,6 +115,7 @@
     background:var(--accent);
     color:#3a2408;
     box-shadow:0 6px 16px rgba(0,0,0,0.18);
+    white-space:nowrap;
   }
   .edit-mode-btn.active{
     background:#2f5fa3;
@@ -113,10 +123,6 @@
   }
   .reset-layout-link{
     display:none;
-    position:fixed;
-    bottom:32px;
-    right:170px;
-    z-index:40;
     font-size:0.78rem;
     font-weight:600;
     color:#6b6b67;
@@ -126,9 +132,6 @@
     padding:4px 4px;
   }
   .reset-layout-link.show{ display:block; }
-  @media (min-width:761px){
-    .edit-mode-btn{ display:block; }
-  }
 
   h1,h2,.display{
     font-family:'Space Grotesk',sans-serif;
@@ -1187,8 +1190,10 @@
     </div>
   </div>
 
-  <button class="edit-mode-btn" id="editModeBtn">Mode édition</button>
-  <span class="reset-layout-link" id="resetLayoutLink">Réinitialiser la disposition</span>
+  <div class="edit-mode-controls">
+    <button class="edit-mode-btn" id="editModeBtn">Mode édition</button>
+    <span class="reset-layout-link" id="resetLayoutLink">Réinitialiser la disposition</span>
+  </div>
 
   <div class="overlay" id="overlay">
     <div class="sheet" id="sheet"></div>
@@ -2727,8 +2732,15 @@ function enterEditMode(){
 function exitEditMode(persist){
   editModeActive = false;
   if(persist){
-    saveLayoutPositions(currentPositionsFromDOM());
+    const positions = currentPositionsFromDOM();
+    saveLayoutPositions(positions);
     pageWrap.classList.add('custom-layout');
+    let maxBottom = 0;
+    getDragBlocks().forEach(block => {
+      const pos = positions[block.dataset.blockId];
+      if(pos) maxBottom = Math.max(maxBottom, pos.top + block.getBoundingClientRect().height);
+    });
+    pageWrap.style.height = (maxBottom + 60) + 'px';
   }
   pageWrap.classList.remove('edit-active');
   editModeBtn.textContent = 'Mode édition';
@@ -2809,5 +2821,6 @@ applySavedLayoutIfAny();
 </script>
 </body>
 </html>
+
 
 
