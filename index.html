@@ -46,6 +46,90 @@
     gap:40px;
     max-width:860px;
   }
+  .page-wrap.edit-active,
+  .page-wrap.custom-layout{
+    position:relative;
+    display:block;
+    width:100%;
+    max-width:1100px;
+  }
+
+  /* ---------- Mode édition (déplacement libre, ordinateur/tablette) ---------- */
+  .drag-wrap{
+    display:flex;
+    flex-direction:column;
+  }
+  .page-wrap.edit-active .drag-wrap,
+  .page-wrap.custom-layout .drag-wrap{
+    position:absolute;
+  }
+  .drag-handle-bar{
+    display:none;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    background:#1c1c18;
+    color:#fff;
+    border-radius:10px 10px 0 0;
+    padding:6px 0;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.68rem;
+    letter-spacing:0.04em;
+    cursor:grab;
+    user-select:none;
+    touch-action:none;
+  }
+  .page-wrap.edit-active .drag-handle-bar{
+    display:flex;
+  }
+  .drag-wrap.dragging{
+    opacity:0.85;
+    z-index:30;
+  }
+  .drag-wrap.dragging .drag-handle-bar{
+    cursor:grabbing;
+  }
+  .edit-mode-btn{
+    display:none;
+    position:fixed;
+    bottom:24px;
+    right:24px;
+    z-index:40;
+    border:none;
+    border-radius:14px;
+    padding:12px 20px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:0.85rem;
+    cursor:pointer;
+    background:var(--accent);
+    color:#3a2408;
+    box-shadow:0 6px 16px rgba(0,0,0,0.18);
+  }
+  .edit-mode-btn.active{
+    background:#2f5fa3;
+    color:#fff;
+  }
+  .reset-layout-link{
+    display:none;
+    position:fixed;
+    bottom:32px;
+    right:170px;
+    z-index:40;
+    font-size:0.78rem;
+    font-weight:600;
+    color:#6b6b67;
+    cursor:pointer;
+    text-decoration:underline;
+    background:#fff;
+    padding:4px 4px;
+  }
+  .reset-layout-link.show{ display:block; }
+  @media (min-width:761px){
+    .edit-mode-btn{ display:block; }
+  }
+
   h1,h2,.display{
     font-family:'Space Grotesk',sans-serif;
   }
@@ -1063,33 +1147,48 @@
 </head>
 <body>
 
-  <div class="page-wrap">
-    <div class="card-wrap" id="cardWrap">
-      <div class="card" id="card"></div>
+  <div class="page-wrap" id="pageWrap">
+    <div class="drag-wrap" id="dragCard" data-block-id="card">
+      <div class="drag-handle-bar" data-drag-handle>⠿ Déplacer</div>
+      <div class="card-wrap" id="cardWrap">
+        <div class="card" id="card"></div>
+      </div>
     </div>
 
     <div class="right-column">
       <div class="bilan-column">
-        <aside class="bilan-panel">
-          <h2>Bilan</h2>
-          <div class="bilan-list" id="bilanList"></div>
-        </aside>
-        <div class="bilan-search-box">
-          <label for="codeInput">Trouver mon bilan avec mon code bilan</label>
-          <input type="text" id="codeInput" placeholder="Ex : 7K2P9X" maxlength="10">
-          <button id="findCodeBtn">Rechercher</button>
-          <p class="code-msg" id="codeMsg"></p>
+        <div class="drag-wrap" id="dragBilan" data-block-id="bilan">
+          <div class="drag-handle-bar" data-drag-handle>⠿ Déplacer</div>
+          <aside class="bilan-panel">
+            <h2>Bilan</h2>
+            <div class="bilan-list" id="bilanList"></div>
+          </aside>
+        </div>
+        <div class="drag-wrap" id="dragBilanSearch" data-block-id="bilanSearch">
+          <div class="drag-handle-bar" data-drag-handle>⠿ Déplacer</div>
+          <div class="bilan-search-box">
+            <label for="codeInput">Trouver mon bilan avec mon code bilan</label>
+            <input type="text" id="codeInput" placeholder="Ex : 7K2P9X" maxlength="10">
+            <button id="findCodeBtn">Rechercher</button>
+            <p class="code-msg" id="codeMsg"></p>
+          </div>
         </div>
       </div>
 
-      <div class="avis-box">
-        <h2>Laisser un avis</h2>
-        <textarea id="avisText" placeholder="Ton avis sur le test…" maxlength="1000"></textarea>
-        <button id="sendAvisBtn">Envoyer</button>
-        <p class="avis-msg" id="avisMsg"></p>
+      <div class="drag-wrap" id="dragAvis" data-block-id="avis">
+        <div class="drag-handle-bar" data-drag-handle>⠿ Déplacer</div>
+        <div class="avis-box">
+          <h2>Laisser un avis</h2>
+          <textarea id="avisText" placeholder="Ton avis sur le test…" maxlength="1000"></textarea>
+          <button id="sendAvisBtn">Envoyer</button>
+          <p class="avis-msg" id="avisMsg"></p>
+        </div>
       </div>
     </div>
   </div>
+
+  <button class="edit-mode-btn" id="editModeBtn">Mode édition</button>
+  <span class="reset-layout-link" id="resetLayoutLink">Réinitialiser la disposition</span>
 
   <div class="overlay" id="overlay">
     <div class="sheet" id="sheet"></div>
@@ -2305,7 +2404,7 @@ function openSheet(b){
       <div><span class="label">Date de naissance</span>${b.date ? formatDate(b.date) + ' (' + calcAge(b.date) + ' ans)' : '—'}</div>
       <div><span class="label">Genre</span>${escapeHtml(b.genre)}</div>
       ${b.localOnly ? '' : `<div><span class="label">Code bilan</span>${escapeHtml(b.code)}</div>`}
-      ${b.photoUrl ? `<div><span class="label">Photo</span><img src="${b.photoUrl}" alt="Photo" style="display:block;width:48px;height:48px;border-radius:10px;object-fit:cover;border:1.5px solid #ccc;margin-top:2px;"></div>` : ''}
+      ${b.photoUrl ? `<div><span class="label">Photo</span><a href="${b.photoUrl}" target="_blank" rel="noopener noreferrer"><img src="${b.photoUrl}" alt="Photo" style="display:block;width:48px;height:48px;border-radius:10px;object-fit:cover;border:1.5px solid #ccc;margin-top:2px;cursor:pointer;"></a></div>` : ''}
     </div>
     <div class="result-block">
       <h3>Connaissance en logos (moyenne)</h3>
@@ -2506,13 +2605,209 @@ document.getElementById('sendAvisBtn').addEventListener('click', async () => {
   }
 });
 
+/* ===================== Mode édition : disposition libre (ordinateur/tablette uniquement) ===================== */
+const LAYOUT_STORAGE_KEY = 'reflexion_layout_positions';
+const EDIT_MODE_BREAKPOINT = 760;
+
+const pageWrap = document.getElementById('pageWrap');
+const editModeBtn = document.getElementById('editModeBtn');
+const resetLayoutLink = document.getElementById('resetLayoutLink');
+let editModeActive = false;
+let layoutDragState = null;
+
+function isDesktopOrTablet(){
+  return window.innerWidth > EDIT_MODE_BREAKPOINT;
+}
+function loadLayoutPositions(){
+  try{
+    return JSON.parse(localStorage.getItem(LAYOUT_STORAGE_KEY)) || {};
+  } catch(e){ return {}; }
+}
+function saveLayoutPositions(positions){
+  localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(positions));
+}
+function getDragBlocks(){
+  return Array.from(document.querySelectorAll('.drag-wrap'));
+}
+function currentPositionsFromDOM(){
+  const positions = {};
+  getDragBlocks().forEach(block => {
+    if(block.style.position === 'absolute'){
+      positions[block.dataset.blockId] = {
+        left: parseFloat(block.style.left) || 0,
+        top: parseFloat(block.style.top) || 0,
+        width: parseFloat(block.style.width) || block.getBoundingClientRect().width
+      };
+    }
+  });
+  return positions;
+}
+
+function clearInlineLayout(){
+  pageWrap.classList.remove('edit-active', 'custom-layout');
+  pageWrap.style.height = '';
+  getDragBlocks().forEach(block => {
+    block.style.position = '';
+    block.style.left = '';
+    block.style.top = '';
+    block.style.width = '';
+  });
+}
+
+function applySavedLayoutIfAny(){
+  if(!isDesktopOrTablet()){
+    clearInlineLayout();
+    return;
+  }
+  const positions = loadLayoutPositions();
+  if(Object.keys(positions).length === 0) return;
+
+  const wrapRect = pageWrap.getBoundingClientRect();
+  let maxBottom = wrapRect.height;
+  pageWrap.classList.add('custom-layout');
+  getDragBlocks().forEach(block => {
+    const pos = positions[block.dataset.blockId];
+    if(!pos) return;
+    block.style.position = 'absolute';
+    block.style.left = pos.left + 'px';
+    block.style.top = pos.top + 'px';
+    block.style.width = pos.width + 'px';
+    maxBottom = Math.max(maxBottom, pos.top + block.getBoundingClientRect().height);
+  });
+  pageWrap.style.height = (maxBottom + 60) + 'px';
+}
+
+function refreshLayoutForViewport(){
+  if(!isDesktopOrTablet()){
+    if(editModeActive) exitEditMode(false);
+    clearInlineLayout();
+  } else if(!editModeActive){
+    applySavedLayoutIfAny();
+  }
+}
+
+function enterEditMode(){
+  if(!isDesktopOrTablet()) return;
+  editModeActive = true;
+
+  const blocks = getDragBlocks();
+  const positions = loadLayoutPositions();
+  const preRects = blocks.map(block => block.getBoundingClientRect());
+
+  pageWrap.classList.add('edit-active');
+  const wrapRect = pageWrap.getBoundingClientRect();
+  let maxBottom = wrapRect.height;
+
+  blocks.forEach((block, i) => {
+    const saved = positions[block.dataset.blockId];
+    let left, top, width;
+    if(saved){
+      left = saved.left;
+      top = saved.top;
+      width = saved.width;
+    } else {
+      const rect = preRects[i];
+      left = rect.left - wrapRect.left;
+      top = rect.top - wrapRect.top;
+      width = rect.width;
+    }
+    block.style.position = 'absolute';
+    block.style.left = left + 'px';
+    block.style.top = top + 'px';
+    block.style.width = width + 'px';
+    maxBottom = Math.max(maxBottom, top + block.getBoundingClientRect().height);
+  });
+  pageWrap.style.height = (maxBottom + 250) + 'px';
+
+  editModeBtn.textContent = 'Verrouiller la disposition';
+  editModeBtn.classList.add('active');
+  resetLayoutLink.classList.add('show');
+}
+
+function exitEditMode(persist){
+  editModeActive = false;
+  if(persist){
+    saveLayoutPositions(currentPositionsFromDOM());
+    pageWrap.classList.add('custom-layout');
+  }
+  pageWrap.classList.remove('edit-active');
+  editModeBtn.textContent = 'Mode édition';
+  editModeBtn.classList.remove('active');
+  resetLayoutLink.classList.remove('show');
+}
+
+editModeBtn.addEventListener('click', () => {
+  if(editModeActive){
+    exitEditMode(true);
+  } else {
+    enterEditMode();
+  }
+});
+
+resetLayoutLink.addEventListener('click', () => {
+  localStorage.removeItem(LAYOUT_STORAGE_KEY);
+  editModeActive = false;
+  editModeBtn.textContent = 'Mode édition';
+  editModeBtn.classList.remove('active');
+  resetLayoutLink.classList.remove('show');
+  clearInlineLayout();
+});
+
+document.querySelectorAll('[data-drag-handle]').forEach(handle => {
+  const block = handle.closest('.drag-wrap');
+
+  handle.addEventListener('pointerdown', (e) => {
+    if(!editModeActive) return;
+    const wrapRect = pageWrap.getBoundingClientRect();
+    const blockRect = block.getBoundingClientRect();
+    layoutDragState = {
+      block,
+      offsetX: e.clientX - blockRect.left,
+      offsetY: e.clientY - blockRect.top,
+      wrapRect
+    };
+    block.classList.add('dragging');
+    handle.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+
+  handle.addEventListener('pointermove', (e) => {
+    if(!layoutDragState || layoutDragState.block !== block) return;
+    const { offsetX, offsetY, wrapRect } = layoutDragState;
+    const blockRect = block.getBoundingClientRect();
+    let left = e.clientX - wrapRect.left - offsetX;
+    let top = e.clientY - wrapRect.top - offsetY;
+    left = Math.max(0, Math.min(left, wrapRect.width - blockRect.width));
+    top = Math.max(0, top);
+    block.style.left = left + 'px';
+    block.style.top = top + 'px';
+    const neededHeight = top + blockRect.height + 250;
+    if(neededHeight > parseFloat(pageWrap.style.height || 0)){
+      pageWrap.style.height = neededHeight + 'px';
+    }
+  });
+
+  const endDrag = () => {
+    if(!layoutDragState || layoutDragState.block !== block) return;
+    block.classList.remove('dragging');
+    layoutDragState = null;
+    saveLayoutPositions(currentPositionsFromDOM());
+  };
+  handle.addEventListener('pointerup', endDrag);
+  handle.addEventListener('pointercancel', endDrag);
+});
+
+window.addEventListener('resize', refreshLayoutForViewport);
+
 /* ===================== Init ===================== */
 renderRegistration();
 renderBilanList();
 checkMaintenance();
 subscribeMaintenanceRealtime();
 setInterval(checkMaintenance, 20000);
+applySavedLayoutIfAny();
 </script>
 </body>
 </html>
+
 
