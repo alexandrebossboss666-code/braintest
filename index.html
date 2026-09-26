@@ -93,34 +93,37 @@
   .edit-mode-controls{
     display:none;
     position:fixed;
-    top:50%;
+    top:24px;
     right:24px;
-    transform:translateY(-50%);
     z-index:40;
     flex-direction:column;
     align-items:flex-end;
-    gap:10px;
+    gap:8px;
   }
   @media (min-width:761px){
     .edit-mode-controls{ display:flex; }
   }
   .edit-mode-btn{
-    border:none;
-    border-radius:14px;
-    padding:12px 20px;
-    font-family:'Space Grotesk',sans-serif;
-    font-weight:700;
-    font-size:0.85rem;
+    border:1.5px solid #ded8d0;
+    border-radius:10px;
+    padding:8px 16px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:0.82rem;
     cursor:pointer;
-    background:var(--accent);
-    color:#3a2408;
-    box-shadow:0 6px 16px rgba(0,0,0,0.18);
+    background:#f4f2ee;
+    color:#3a3a37;
+    box-shadow:0 2px 6px rgba(0,0,0,0.06);
     white-space:nowrap;
+    transition:background .15s ease, color .15s ease;
   }
+  .edit-mode-btn:hover{ background:#ebe8e2; }
   .edit-mode-btn.active{
-    background:#2f5fa3;
+    background:#3a3a37;
+    border-color:#3a3a37;
     color:#fff;
   }
+  .edit-mode-btn.active:hover{ background:#2c2c2a; }
   .reset-layout-link{
     display:none;
     font-size:0.78rem;
@@ -2821,6 +2824,7 @@ applySavedLayoutIfAny();
 </script>
 </body>
 </html>
+
 
 
 
