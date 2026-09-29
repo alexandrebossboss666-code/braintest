@@ -1809,10 +1809,46 @@ function hexToRgb(hex){
     b: parseInt(m.substring(4,6),16)
   };
 }
+function rgbToHsl(r, g, b){
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  if(max === min){
+    h = 0; s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch(max){
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      default: h = (r - g) / d + 4; break;
+    }
+    h *= 60;
+  }
+  return { h, s: s * 100, l: l * 100 };
+}
 function colorCloseness(c1, c2){
-  const dist = Math.sqrt((c1.r-c2.r)**2 + (c1.g-c2.g)**2 + (c1.b-c2.b)**2);
-  const maxDist = Math.sqrt(255**2 * 3);
-  return Math.max(0, 100 * (1 - dist / maxDist));
+  const hsl1 = rgbToHsl(c1.r, c1.g, c1.b);
+  const hsl2 = rgbToHsl(c2.r, c2.g, c2.b);
+
+  // Différence de teinte circulaire (0 à 180°, le cercle chromatique boucle à 360°)
+  let hueDiff = Math.abs(hsl1.h - hsl2.h);
+  if(hueDiff > 180) hueDiff = 360 - hueDiff;
+  const satDiff = Math.abs(hsl1.s - hsl2.s);
+  const lightDiff = Math.abs(hsl1.l - hsl2.l);
+
+  const hueScore = 100 * (1 - hueDiff / 180);
+  const satScore = 100 * (1 - satDiff / 100);
+  const lightScore = 100 * (1 - lightDiff / 100);
+
+  // La teinte n'a de sens que si les couleurs sont saturées : sur du gris, elle est
+  // arbitraire, donc son poids diminue avec la saturation la plus faible des deux couleurs
+  const minSat = Math.min(hsl1.s, hsl2.s) / 100;
+  const hueWeight = 0.6 * minSat;
+  const satWeight = 0.25;
+  const lightWeight = 1 - hueWeight - satWeight;
+  const score = (hueScore * hueWeight) + (satScore * satWeight) + (lightScore * lightWeight);
+  return Math.max(0, Math.min(100, score));
 }
 function perturbColor(base, maxDelta){
   const clamp = (v) => Math.max(0, Math.min(255, v));
@@ -2824,6 +2860,7 @@ applySavedLayoutIfAny();
 </script>
 </body>
 </html>
+
 
 
 
