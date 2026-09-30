@@ -53,6 +53,12 @@
     max-width:none;
     margin:0;
   }
+  .page-wrap.edit-active{
+    background-image:
+      linear-gradient(to right, rgba(28,28,24,0.10) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(28,28,24,0.10) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
 
   /* ---------- Mode édition (déplacement libre, ordinateur/tablette) ---------- */
   .drag-wrap{
@@ -2652,6 +2658,11 @@ document.getElementById('sendAvisBtn').addEventListener('click', async () => {
 /* ===================== Mode édition : disposition libre (ordinateur/tablette uniquement) ===================== */
 const LAYOUT_STORAGE_KEY = 'reflexion_layout_positions';
 const EDIT_MODE_BREAKPOINT = 760;
+const EDIT_GRID_SIZE = 40; // doit correspondre au background-size de .page-wrap.edit-active
+
+function snapToGrid(value){
+  return Math.round(value / EDIT_GRID_SIZE) * EDIT_GRID_SIZE;
+}
 
 const pageWrap = document.getElementById('pageWrap');
 const editModeBtn = document.getElementById('editModeBtn');
@@ -2830,6 +2841,8 @@ document.querySelectorAll('[data-drag-handle]').forEach(handle => {
     let top = e.clientY - wrapRect.top - offsetY;
     left = Math.max(0, Math.min(left, wrapRect.width - blockRect.width));
     top = Math.max(0, top);
+    left = snapToGrid(left);
+    top = snapToGrid(top);
     block.style.left = left + 'px';
     block.style.top = top + 'px';
     const neededHeight = top + blockRect.height + 250;
@@ -2860,9 +2873,3 @@ applySavedLayoutIfAny();
 </script>
 </body>
 </html>
-
-
-
-
-
-
