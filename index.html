@@ -2589,6 +2589,39 @@ function applyMaintenanceState(isActive){
   }
 }
 
+/* ===================== Détection de falsification du verrou (DevTools) ===================== */
+let maintenanceTamperDetected = false;
+
+function showTamperAlert(){
+  if(maintenanceTamperDetected) return;
+  maintenanceTamperDetected = true;
+  forceModalChoice = true;
+  sheet.innerHTML = `
+    <h2 style="text-align:center;margin-bottom:14px;">Modification détectée</h2>
+    <p style="text-align:center;font-size:0.92rem;line-height:1.5;">
+      Une tentative de modification de la page a été détectée pendant que le site est en maintenance.
+      Merci d'actualiser la page pour continuer.
+    </p>
+  `;
+  overlay.classList.add('show');
+}
+
+function checkLockIntegrity(){
+  if(!maintenanceActive || step !== 0 || maintenanceTamperDetected) return;
+  const lock = document.getElementById('lockCard');
+  if(!lock){
+    showTamperAlert();
+    return;
+  }
+  const style = window.getComputedStyle(lock);
+  const blurMissing = (style.backdropFilter === 'none' || style.backdropFilter === '')
+    && (style.webkitBackdropFilter === 'none' || style.webkitBackdropFilter === '');
+  if(style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity) === 0 || blurMissing){
+    showTamperAlert();
+  }
+}
+setInterval(checkLockIntegrity, 1500);
+
 async function checkMaintenance(){
   try{
     const { data, error } = await sb.from('settings').select('maintenance').eq('id', 1).maybeSingle();
