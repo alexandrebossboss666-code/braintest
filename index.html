@@ -566,6 +566,8 @@
   .opt-btn.correct{ background:var(--bonne); border-color:#3f7a2b; color:#153c0c; }
   .opt-btn.wrong{ background:var(--mauvaise); border-color:#9c2b2b; color:#4a0f0f; }
   .opt-btn.disabled{ pointer-events:none; opacity:0.85; }
+  .opt-btn.mystery-card{ background:#FFBA6B; border-color:#e8a04f; color:#26261f; font-size:1.05rem; font-weight:800; }
+  .opt-btn.mystery-card:hover{ background:#f5a94f; }
 
   /* ---------- Questions couleur ---------- */
   .color-rect{
@@ -1757,6 +1759,46 @@ function timerHTML(){
 }
 
 /* ===================== Questions logo (1-4) ===================== */
+/* ===================== Révélation façon "12 coups de midi" ===================== */
+function flipButton(btn, mutate, duration = 260){
+  return new Promise(resolve => {
+    const out = btn.animate(
+      [{ transform: 'perspective(600px) rotateX(0deg)' }, { transform: 'perspective(600px) rotateX(90deg)' }],
+      { duration, easing: 'ease-in' }
+    );
+    out.onfinish = () => {
+      mutate();
+      const back = btn.animate(
+        [{ transform: 'perspective(600px) rotateX(-90deg)' }, { transform: 'perspective(600px) rotateX(0deg)' }],
+        { duration, easing: 'ease-out' }
+      );
+      back.onfinish = resolve;
+    };
+  });
+}
+// Une des trois étiquettes est cachée au hasard derrière une étiquette orange "?".
+function optionsHTML(labels){
+  const hidden = Math.floor(Math.random() * labels.length);
+  return labels.map((l, i) =>
+    `<button class="opt-btn${i === hidden ? ' mystery-card' : ''}" data-opt="${i}">${i === hidden ? '?' : l}</button>`
+  ).join('');
+}
+// Quel que soit le choix, l'étiquette orange se retourne et dévoile ce qu'elle cachait ;
+// puis l'étiquette choisie passe au vert si elle est bonne, au rouge sinon (la bonne passe alors au vert).
+async function revealAnswer(chosenBtn, correctBtn, isCorrect, labels){
+  const mystery = card.querySelector('.mystery-card');
+  await new Promise(r => setTimeout(r, 350));
+  if(mystery){
+    await flipButton(mystery, () => {
+      mystery.textContent = labels[mystery.dataset.opt];
+      mystery.classList.remove('mystery-card');
+    }, 350);
+  }
+  await new Promise(r => setTimeout(r, 300));
+  chosenBtn.classList.add(isCorrect ? 'correct' : 'wrong');
+  if(!isCorrect && correctBtn) correctBtn.classList.add('correct');
+}
+
 function renderLogoQuestion(index){
   const LOGO_QUESTIONS = testIsExpert ? LOGO_QUESTIONS_EXPERT : LOGO_QUESTIONS_NORMAL;
   const q = LOGO_QUESTIONS[index];
@@ -1766,7 +1808,7 @@ function renderLogoQuestion(index){
     <div class="logo-square" style="background:${q.gradient}"></div>
     <p class="question-text">Choisis le nom du logo</p>
     <div class="options">
-      ${q.options.map((opt,i) => `<button class="opt-btn" data-opt="${i}">${opt}</button>`).join('')}
+      ${optionsHTML(q.options)}
     </div>
     <p class="feedback-flash" id="feedback"></p>
   `;
@@ -1777,23 +1819,19 @@ function renderLogoQuestion(index){
       buttons.forEach(b => b.classList.add('disabled'));
       const chosen = q.options[btn.dataset.opt];
       const correct = chosen === q.answer;
-      if(correct){
-        logoCorrectCount++;
-        btn.classList.add('correct');
-        document.getElementById('feedback').textContent = 'Bonne réponse !';
-      } else {
-        btn.classList.add('wrong');
-        buttons.forEach(b => { if(b.textContent === q.answer) b.classList.add('correct'); });
-        document.getElementById('feedback').textContent = 'Pas tout à fait…';
-      }
-      setTimeout(() => {
-        if(testEnded) return;
-        if(index + 1 < LOGO_QUESTIONS.length){
-          renderLogoQuestion(index + 1);
-        } else {
-          renderColorQuestion(0);
-        }
-      }, 700);
+      const correctBtn = Array.from(buttons).find(b => q.options[b.dataset.opt] === q.answer);
+      if(correct) logoCorrectCount++;
+      revealAnswer(btn, correctBtn, correct, q.options).then(() => {
+        document.getElementById('feedback').textContent = correct ? 'Bonne réponse !' : 'Pas tout à fait…';
+        setTimeout(() => {
+          if(testEnded) return;
+          if(index + 1 < LOGO_QUESTIONS.length){
+            renderLogoQuestion(index + 1);
+          } else {
+            renderColorQuestion(0);
+          }
+        }, 700);
+      });
     });
   });
 }
@@ -1853,7 +1891,7 @@ function renderColorQuestion(index){
       <div class="color-rect" style="background:${currentRandomColor.hex}"></div>
       <p class="question-text">Quel est le code HTML de cette couleur ?</p>
       <div class="options">
-        ${options.map((opt,i) => `<button class="opt-btn" data-opt="${i}">${opt.hex.toUpperCase()}</button>`).join('')}
+        ${optionsHTML(options.map(o => o.hex.toUpperCase()))}
       </div>
       <p class="feedback-flash" id="feedback"></p>
     `;
@@ -1864,24 +1902,19 @@ function renderColorQuestion(index){
         buttons.forEach(b => b.classList.add('disabled'));
         const chosen = options[btn.dataset.opt];
         const correct = chosen.hex === currentRandomColor.hex;
-        const score = correct ? 100 : 0;
-        colorScores.push(score);
-        if(correct){
-          btn.classList.add('correct');
-          document.getElementById('feedback').textContent = 'Bonne réponse !';
-        } else {
-          btn.classList.add('wrong');
-          buttons.forEach(b => { if(options[b.dataset.opt].hex === currentRandomColor.hex) b.classList.add('correct'); });
-          document.getElementById('feedback').textContent = 'Pas tout à fait…';
-        }
-        setTimeout(() => {
-          if(testEnded) return;
-          if(index + 1 < NUM_COLOR_QUESTIONS){
-            renderColorQuestion(index + 1);
-          } else {
-            renderNoteSingleQuestion(0);
-          }
-        }, 900);
+        colorScores.push(correct ? 100 : 0);
+        const correctBtn = Array.from(buttons).find(b => options[b.dataset.opt].hex === currentRandomColor.hex);
+        revealAnswer(btn, correctBtn, correct, options.map(o => o.hex.toUpperCase())).then(() => {
+          document.getElementById('feedback').textContent = correct ? 'Bonne réponse !' : 'Pas tout à fait…';
+          setTimeout(() => {
+            if(testEnded) return;
+            if(index + 1 < NUM_COLOR_QUESTIONS){
+              renderColorQuestion(index + 1);
+            } else {
+              renderNoteSingleQuestion(0);
+            }
+          }, 700);
+        });
       });
     });
     return;
@@ -1931,7 +1964,7 @@ function renderNoteSingleQuestion(index){
     <div class="play-wrap"><div class="play-btn" id="playBtn" role="button" aria-label="Écouter"></div></div>
     <p class="question-text">${testIsExpert ? "Quel accord viens-tu d'entendre ?" : "Quelle note viens-tu d'entendre ?"}</p>
     <div class="options">
-      ${options.map((opt,i) => `<button class="opt-btn" data-opt="${i}">${opt}</button>`).join('')}
+      ${optionsHTML(options)}
     </div>
     <p class="feedback-flash" id="feedback"></p>
   `;
@@ -1947,23 +1980,19 @@ function renderNoteSingleQuestion(index){
       buttons.forEach(b => b.classList.add('disabled'));
       const chosen = options[btn.dataset.opt];
       const correct = chosen === target;
-      if(correct){
-        noteCorrectCount++;
-        btn.classList.add('correct');
-        document.getElementById('feedback').textContent = 'Bonne réponse !';
-      } else {
-        btn.classList.add('wrong');
-        buttons.forEach(b => { if(b.textContent === target) b.classList.add('correct'); });
-        document.getElementById('feedback').textContent = 'Pas tout à fait…';
-      }
-      setTimeout(() => {
-        if(testEnded) return;
-        if(index + 1 < NUM_NOTE_SINGLE_QUESTIONS){
-          renderNoteSingleQuestion(index + 1);
-        } else {
-          renderNoteSequenceQuestion(0);
-        }
-      }, 700);
+      const correctBtn = Array.from(buttons).find(b => options[b.dataset.opt] === target);
+      if(correct) noteCorrectCount++;
+      revealAnswer(btn, correctBtn, correct, options).then(() => {
+        document.getElementById('feedback').textContent = correct ? 'Bonne réponse !' : 'Pas tout à fait…';
+        setTimeout(() => {
+          if(testEnded) return;
+          if(index + 1 < NUM_NOTE_SINGLE_QUESTIONS){
+            renderNoteSingleQuestion(index + 1);
+          } else {
+            renderNoteSequenceQuestion(0);
+          }
+        }, 700);
+      });
     });
   });
 }
@@ -2877,5 +2906,3 @@ applySavedLayoutIfAny();
 </script>
 </body>
 </html>
-
-
