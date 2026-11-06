@@ -1158,6 +1158,62 @@
     .right-column{ order:2; margin:0 auto; }
     .bilan-panel{ max-height:220px; }
   }
+
+  /* ---------- Invite de commandes ---------- */
+  .term-btn{
+    position:fixed;
+    left:18px; bottom:18px;
+    width:46px; height:46px;
+    border-radius:50%;
+    border:none;
+    background:#000;
+    cursor:pointer;
+    z-index:900;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 12px rgba(0,0,0,0.3);
+    transition:transform .12s ease;
+  }
+  .term-btn:hover{ transform:scale(1.08); }
+  .term-btn svg{ width:22px; height:22px; }
+  .term-panel{
+    position:fixed;
+    left:18px; bottom:76px;
+    width:min(440px, calc(100vw - 36px));
+    background:#000;
+    color:#e8e8e8;
+    border-radius:10px;
+    padding:12px 14px;
+    z-index:900;
+    font-family:'Consolas','Menlo','Courier New',monospace;
+    font-size:0.85rem;
+    box-shadow:0 10px 30px rgba(0,0,0,0.45);
+    display:none;
+  }
+  .term-panel.show{ display:block; }
+  .term-log{ max-height:180px; overflow-y:auto; margin-bottom:8px; }
+  .term-line{ margin:0 0 4px; line-height:1.4; word-break:break-word; white-space:pre-wrap; }
+  .term-line.cmd{ color:#9aa0a6; }
+  .term-line.ok{ color:#6fdc6f; }
+  .term-line.err{ color:#ff6b63; }
+  .term-line .error-line{ color:inherit; }
+  .term-input-row{ display:flex; align-items:center; gap:8px; }
+  .term-prompt{ color:#6fdc6f; }
+  .term-input{
+    flex:1;
+    background:transparent;
+    border:none;
+    outline:none;
+    color:#fff;
+    font-family:inherit;
+    font-size:inherit;
+    caret-color:#fff;
+    min-width:0;
+  }
+  .term-suggest{ margin-top:8px; border-top:1px solid #333; padding-top:8px; display:none; }
+  .term-suggest.show{ display:block; }
+  .term-suggest-item{ color:#9aa0a6; padding:3px 0; cursor:pointer; }
+  .term-suggest-item:hover{ color:#fff; }
+  .term-suggest-item b{ color:#e8e8e8; font-weight:600; }
 </style>
 </head>
 <body>
@@ -1209,6 +1265,21 @@
 
   <div class="overlay" id="overlay">
     <div class="sheet" id="sheet"></div>
+  </div>
+
+  <button class="term-btn" id="termBtn" aria-label="Invite de commandes" title="Invite de commandes">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="4,7 10,12 4,17"></polyline>
+      <line x1="12" y1="18" x2="20" y2="18"></line>
+    </svg>
+  </button>
+  <div class="term-panel" id="termPanel">
+    <div class="term-log" id="termLog"></div>
+    <div class="term-input-row">
+      <span class="term-prompt">&gt;</span>
+      <input type="text" class="term-input" id="termInput" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Commande">
+    </div>
+    <div class="term-suggest" id="termSuggest"></div>
   </div>
 
 <script>
@@ -1481,11 +1552,11 @@ function renderRegistration(){
     <h1>Test de réflexion</h1>
     <div class="field">
       <label>Nom<span class="req">*</span></label>
-      <input type="text" id="fNom" autocomplete="off">
+      <input type="text" id="fNom" autocomplete="off" maxlength="30">
     </div>
     <div class="field">
       <label>Prénom<span class="req">*</span></label>
-      <input type="text" id="fPrenom" autocomplete="off">
+      <input type="text" id="fPrenom" autocomplete="off" maxlength="30">
     </div>
     <div class="field">
       <label>Date de naissance<span class="req">*</span></label>
@@ -1679,8 +1750,8 @@ function renderRegistration(){
   startBtn.addEventListener('click', () => {
     if(startBtn.disabled) return;
     participant = {
-      nom: document.getElementById('fNom').value.trim(),
-      prenom: document.getElementById('fPrenom').value.trim(),
+      nom: document.getElementById('fNom').value.trim().slice(0, 30),
+      prenom: document.getElementById('fPrenom').value.trim().slice(0, 30),
       date: document.getElementById('fDate').value,
       genre: document.getElementById('fGenre').value
     };
@@ -1802,13 +1873,14 @@ async function revealAnswer(chosenBtn, correctBtn, isCorrect, labels){
 function renderLogoQuestion(index){
   const LOGO_QUESTIONS = testIsExpert ? LOGO_QUESTIONS_EXPERT : LOGO_QUESTIONS_NORMAL;
   const q = LOGO_QUESTIONS[index];
+  const options = shuffle([...q.options]); // ordre des réponses mélangé à chaque question
   card.innerHTML = `
     ${timerHTML()}
     <div class="quiz-progress">Question ${index+1} / ${TOTAL_QUESTIONS}</div>
     <div class="logo-square" style="background:${q.gradient}"></div>
     <p class="question-text">Choisis le nom du logo</p>
     <div class="options">
-      ${optionsHTML(q.options)}
+      ${optionsHTML(options)}
     </div>
     <p class="feedback-flash" id="feedback"></p>
   `;
@@ -1817,11 +1889,11 @@ function renderLogoQuestion(index){
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
       buttons.forEach(b => b.classList.add('disabled'));
-      const chosen = q.options[btn.dataset.opt];
+      const chosen = options[btn.dataset.opt];
       const correct = chosen === q.answer;
-      const correctBtn = Array.from(buttons).find(b => q.options[b.dataset.opt] === q.answer);
+      const correctBtn = Array.from(buttons).find(b => options[b.dataset.opt] === q.answer);
       if(correct) logoCorrectCount++;
-      revealAnswer(btn, correctBtn, correct, q.options).then(() => {
+      revealAnswer(btn, correctBtn, correct, options).then(() => {
         document.getElementById('feedback').textContent = correct ? 'Bonne réponse !' : 'Pas tout à fait…';
         setTimeout(() => {
           if(testEnded) return;
@@ -2896,6 +2968,126 @@ document.querySelectorAll('[data-drag-handle]').forEach(handle => {
 
 window.addEventListener('resize', refreshLayoutForViewport);
 
+/* ===================== Invite de commandes ===================== */
+const TERM_COMMANDS = [
+  { usage: 'delete a bilan key={code bilan}', desc: 'supprime ton bilan du serveur' },
+  { usage: 'restore the site',               desc: 'réinitialise le site (mode expert reverrouillé, bilans effacés)' }
+];
+const termBtn = document.getElementById('termBtn');
+const termPanel = document.getElementById('termPanel');
+const termLog = document.getElementById('termLog');
+const termInput = document.getElementById('termInput');
+const termSuggest = document.getElementById('termSuggest');
+let termAwaitingRestore = false;
+
+function termPrint(text, kind){
+  const line = document.createElement('p');
+  line.className = 'term-line ' + (kind || '');
+  if(kind === 'err'){
+    line.innerHTML = errorLineHTML(text);
+  } else {
+    line.textContent = text;
+  }
+  termLog.appendChild(line);
+  termLog.scrollTop = termLog.scrollHeight;
+}
+
+function termUpdateSuggestions(){
+  if(termInput.value.length === 0 || termAwaitingRestore){
+    termSuggest.classList.remove('show');
+    termSuggest.innerHTML = '';
+    return;
+  }
+  termSuggest.innerHTML = TERM_COMMANDS.map((c, i) =>
+    `<div class="term-suggest-item" data-i="${i}"><b>${escapeHtml(c.usage)}</b> — ${escapeHtml(c.desc)}</div>`
+  ).join('');
+  termSuggest.classList.add('show');
+}
+termSuggest.addEventListener('click', (e) => {
+  const item = e.target.closest('.term-suggest-item');
+  if(!item) return;
+  const usage = TERM_COMMANDS[item.dataset.i].usage;
+  termInput.value = usage.replace('{code bilan}', '');
+  termInput.focus();
+  const end = usage.indexOf('{');
+  if(end >= 0) termInput.setSelectionRange(end, termInput.value.length);
+});
+termInput.addEventListener('input', termUpdateSuggestions);
+
+termBtn.addEventListener('click', () => {
+  termPanel.classList.toggle('show');
+  if(termPanel.classList.contains('show')){
+    if(!termLog.children.length) termPrint('Tape une lettre pour voir les commandes disponibles.');
+    termInput.focus();
+  }
+});
+
+async function termDeleteBilan(rawCode){
+  const code = rawCode.trim().toUpperCase();
+  if(!/^[A-Z0-9]{3,20}$/.test(code)){
+    termPrint('Code invalide : ' + rawCode, 'err');
+    return;
+  }
+  termPrint('Suppression du bilan ' + code + '…');
+  try{
+    const { data, error } = await sb.rpc('delete_bilan', { p_code: code });
+    if(error){
+      console.error(error);
+      termPrint('Erreur serveur : ' + (error.message || 'inconnue'), 'err');
+      return;
+    }
+    if(!data){
+      termPrint('Aucun bilan trouvé avec la clé ' + code + '.', 'err');
+      return;
+    }
+    if(loadLocalBilans().some(b => b.code === code)) removeLocalBilan(code);
+    termPrint('Bilan ' + code + ' supprimé du serveur.', 'ok');
+  } catch(e){
+    termPrint('Erreur de connexion, réessaie.', 'err');
+  }
+}
+
+function termRestoreSite(){
+  try{ localStorage.clear(); } catch(e){}
+  try{ sessionStorage.clear(); } catch(e){}
+  termPrint('Site réinitialisé. Rechargement…', 'ok');
+  setTimeout(() => location.reload(), 600);
+}
+
+async function termRun(raw){
+  const cmd = raw.trim();
+  if(!cmd) return;
+  termPrint('> ' + cmd, 'cmd');
+
+  if(termAwaitingRestore){
+    termAwaitingRestore = false;
+    if(/^(oui|o|yes|y)$/i.test(cmd)) termRestoreSite();
+    else termPrint('Réinitialisation annulée.');
+    return;
+  }
+
+  let m;
+  if((m = cmd.match(/^delete a bilan key=\{?\s*([^\s{}]+)\s*\}?$/i))){
+    await termDeleteBilan(m[1]);
+  } else if(/^restore the site0?$/i.test(cmd)){
+    termAwaitingRestore = true;
+    termPrint('Cela efface les données de ce navigateur (mode expert reverrouillé, bilans disparus). Confirmer ? (oui / non)');
+  } else {
+    termPrint('Commande inconnue : ' + cmd, 'err');
+  }
+}
+
+termInput.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter'){
+    const value = termInput.value;
+    termInput.value = '';
+    termUpdateSuggestions();
+    termRun(value);
+  } else if(e.key === 'Escape'){
+    termPanel.classList.remove('show');
+  }
+});
+
 /* ===================== Init ===================== */
 renderRegistration();
 renderBilanList();
@@ -2906,3 +3098,4 @@ applySavedLayoutIfAny();
 </script>
 </body>
 </html>
+
