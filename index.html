@@ -2667,15 +2667,8 @@ let maintenanceTamperDetected = false;
 function showTamperAlert(){
   if(maintenanceTamperDetected) return;
   maintenanceTamperDetected = true;
-  forceModalChoice = true;
-  sheet.innerHTML = `
-    <h2 style="text-align:center;margin-bottom:14px;">Modification détectée</h2>
-    <p style="text-align:center;font-size:0.92rem;line-height:1.5;">
-      Une tentative de modification de la page a été détectée pendant que le site est en maintenance.
-      Merci d'actualiser la page pour continuer.
-    </p>
-  `;
-  overlay.classList.add('show');
+  // Modification détectée : la page se recharge d'elle-même après une seconde
+  setTimeout(() => location.reload(), 1000);
 }
 
 function checkLockIntegrity(){
@@ -3149,5 +3142,3 @@ applySavedLayoutIfAny();
 </script>
 </body>
 </html>
-
-
