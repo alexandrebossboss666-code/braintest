@@ -1213,6 +1213,7 @@
   .term-suggest.show{ display:block; }
   .term-suggest-item{ color:#9aa0a6; padding:3px 0; cursor:pointer; }
   .term-suggest-item:hover{ color:#fff; }
+  .term-hl{ background:#7b2ff7; color:#fff; border-radius:0; }
   .term-suggest-item b{ color:#e8e8e8; font-weight:600; }
 </style>
 </head>
@@ -2966,6 +2967,8 @@ const TERM_COMMANDS = [
   { usage: 'delete a bilan key={code bilan}', desc: 'supprime ton bilan du serveur' },
   { usage: 'consult information bilan key={code}', desc: 'affiche la date, l\'heure et les secondes d\'enregistrement du bilan' },
   { usage: 'display balance sheets',         desc: 'affiche le nombre de bilans enregistrés (normal et expert)' },
+  { usage: 'display ranking',                desc: 'affiche le classement (prénoms et scores) en mode normal et expert' },
+  { usage: 'help',                           desc: 'affiche toutes les commandes disponibles' },
   { usage: 'restore the site',               desc: 'réinitialise le site (mode expert reverrouillé, bilans effacés)' }
 ];
 const termBtn = document.getElementById('termBtn');
@@ -2987,16 +2990,54 @@ function termPrint(text, kind){
   termLog.scrollTop = termLog.scrollHeight;
 }
 
+// Renvoie les intervalles [début, fin[ du texte à surligner pour la saisie donnée, ou null si la commande ne correspond pas
+function termMatchRanges(usage, typed){
+  const low = usage.toLowerCase();
+  const t = typed.toLowerCase();
+  const prefix = usage.split('{')[0].toLowerCase();
+  // La commande est tapée en entier (avec ou sans son argument) : on surligne toute la partie fixe
+  if(prefix.length > 3 && t.startsWith(prefix)) return [[0, prefix.length]];
+  const ranges = [];
+  for(const tok of t.split(/\s+/).filter(Boolean)){
+    let from = 0, found = false, i;
+    while((i = low.indexOf(tok, from)) !== -1){
+      ranges.push([i, i + tok.length]);
+      found = true;
+      from = i + tok.length;
+    }
+    if(!found) return null;
+  }
+  ranges.sort((x, y) => x[0] - y[0]);
+  const merged = [];
+  for(const r of ranges){
+    const last = merged[merged.length - 1];
+    if(last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]);
+    else merged.push([r[0], r[1]]);
+  }
+  return merged;
+}
+function termHighlight(usage, ranges){
+  let out = '', pos = 0;
+  for(const [a, b] of ranges){
+    out += escapeHtml(usage.slice(pos, a)) + '<span class="term-hl">' + escapeHtml(usage.slice(a, b)) + '</span>';
+    pos = b;
+  }
+  return out + escapeHtml(usage.slice(pos));
+}
 function termUpdateSuggestions(){
-  if(termInput.value.length === 0 || termAwaitingRestore){
+  const typed = termInput.value.trim();
+  if(!typed || termAwaitingRestore){
     termSuggest.classList.remove('show');
     termSuggest.innerHTML = '';
     return;
   }
-  termSuggest.innerHTML = TERM_COMMANDS.map((c, i) =>
-    `<div class="term-suggest-item" data-i="${i}"><b>${escapeHtml(c.usage)}</b> — ${escapeHtml(c.desc)}</div>`
-  ).join('');
-  termSuggest.classList.add('show');
+  const items = [];
+  TERM_COMMANDS.forEach((c, i) => {
+    const ranges = termMatchRanges(c.usage, typed);
+    if(ranges) items.push(`<div class="term-suggest-item" data-i="${i}"><b>${termHighlight(c.usage, ranges)}</b> — ${escapeHtml(c.desc)}</div>`);
+  });
+  termSuggest.innerHTML = items.join('');
+  termSuggest.classList.toggle('show', items.length > 0);
 }
 termSuggest.addEventListener('click', (e) => {
   const item = e.target.closest('.term-suggest-item');
@@ -3012,7 +3053,7 @@ termInput.addEventListener('input', termUpdateSuggestions);
 termBtn.addEventListener('click', () => {
   termPanel.classList.toggle('show');
   if(termPanel.classList.contains('show')){
-    if(!termLog.children.length) termPrint('Tape une lettre pour voir les commandes disponibles.');
+    if(!termLog.children.length) termPrint('Tape une lettre pour trouver une commande, ou « help » pour tout voir.');
     termInput.focus();
   }
 });
@@ -3087,6 +3128,40 @@ async function termDisplayBalanceSheets(){
   }
 }
 
+function termHelp(){
+  termPrint('Commandes disponibles :');
+  TERM_COMMANDS.forEach(c => termPrint('  ' + c.usage + '\n    ' + c.desc));
+}
+
+async function termDisplayRanking(){
+  termPrint('Chargement du classement…');
+  try{
+    const { data, error } = await sb.from('bilans').select('prenom, mode, logo_score, color_score, note_score');
+    if(error){
+      console.error(error);
+      termPrint('Erreur serveur : ' + (error.message || 'inconnue'), 'err');
+      return;
+    }
+    // Score global en % : moyenne des parties disponibles (logos /4, couleurs /100, notes /4)
+    const scored = (data || []).map(r => {
+      const parts = [];
+      if(typeof r.logo_score === 'number') parts.push(r.logo_score / 4);
+      if(typeof r.color_score === 'number') parts.push(r.color_score / 100);
+      if(typeof r.note_score === 'number') parts.push(r.note_score / 4);
+      const pct = parts.length ? Math.round(parts.reduce((a, b) => a + b, 0) / parts.length * 100) : 0;
+      return { prenom: r.prenom, mode: r.mode === 'expert' ? 'expert' : 'normal', pct };
+    });
+    ['normal', 'expert'].forEach(mode => {
+      const top = scored.filter(x => x.mode === mode).sort((a, b) => b.pct - a.pct).slice(0, 5);
+      termPrint(`Classement mode ${mode} :`, 'ok');
+      if(!top.length) termPrint('  (aucun bilan)');
+      top.forEach((x, i) => termPrint(`  ${i + 1}. ${x.prenom} — ${x.pct}%`));
+    });
+  } catch(e){
+    termPrint('Erreur de connexion, réessaie.', 'err');
+  }
+}
+
 function termRestoreSite(){
   try{ localStorage.clear(); } catch(e){}
   try{ sessionStorage.clear(); } catch(e){}
@@ -3111,6 +3186,10 @@ async function termRun(raw){
     await termDeleteBilan(m[1]);
   } else if((m = cmd.match(/^consult information bilan key=\{?\s*([^\s{}]+)\s*\}?$/i))){
     await termConsultBilan(m[1]);
+  } else if(/^help$/i.test(cmd)){
+    termHelp();
+  } else if(/^display ranking$/i.test(cmd)){
+    await termDisplayRanking();
   } else if(/^display balance sheets$/i.test(cmd)){
     await termDisplayBalanceSheets();
   } else if(/^restore the site0?$/i.test(cmd)){
@@ -3142,3 +3221,4 @@ applySavedLayoutIfAny();
 </script>
 </body>
 </html>
+
