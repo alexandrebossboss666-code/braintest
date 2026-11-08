@@ -1213,6 +1213,7 @@
   .term-suggest.show{ display:block; }
   .term-suggest-item{ color:#9aa0a6; padding:3px 0; cursor:pointer; }
   .term-suggest-item:hover{ color:#fff; }
+  .term-cmdname{ background:#fff; color:#000; border-radius:0; padding:1px 6px; font-weight:700; }
   .term-hl{ background:#7b2ff7; color:#fff; border-radius:0; }
   .term-suggest-item b{ color:#e8e8e8; font-weight:600; }
 </style>
@@ -2964,7 +2965,7 @@ window.addEventListener('resize', refreshLayoutForViewport);
 
 /* ===================== Invite de commandes ===================== */
 const TERM_COMMANDS = [
-  { usage: 'delete a bilan key={code bilan}', desc: 'supprime ton bilan du serveur' },
+  { usage: 'delete a bilan key={code}', desc: 'supprime ton bilan du serveur' },
   { usage: 'consult information bilan key={code}', desc: 'affiche la date, l\'heure et les secondes d\'enregistrement du bilan' },
   { usage: 'display balance sheets',         desc: 'affiche le nombre de bilans enregistrés (normal et expert)' },
   { usage: 'display ranking',                desc: 'affiche le classement (prénoms et scores) en mode normal et expert' },
@@ -3100,7 +3101,11 @@ async function termConsultBilan(rawCode){
       termPrint('Aucun bilan trouvé avec la clé ' + code + '.', 'err');
       return;
     }
-    const d = new Date(data.created_at);
+    // Si la colonne est de type "timestamp" sans fuseau, Supabase renvoie l'heure UTC sans "Z" :
+    // on l'ajoute pour que le navigateur la convertisse bien en heure locale.
+    let createdAt = String(data.created_at);
+    if(!/(Z|[+-]\d{2}(:?\d{2})?)$/.test(createdAt)) createdAt = createdAt.replace(' ', 'T') + 'Z';
+    const d = new Date(createdAt);
     const pad = (n) => String(n).padStart(2, '0');
     const dateStr = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
     const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
@@ -3130,7 +3135,13 @@ async function termDisplayBalanceSheets(){
 
 function termHelp(){
   termPrint('Commandes disponibles :');
-  TERM_COMMANDS.forEach(c => termPrint('  ' + c.usage + '\n    ' + c.desc));
+  TERM_COMMANDS.forEach(c => {
+    const line = document.createElement('p');
+    line.className = 'term-line';
+    line.innerHTML = '  <span class="term-cmdname">' + escapeHtml(c.usage.toUpperCase()) + '</span>\n    ' + escapeHtml(c.desc);
+    termLog.appendChild(line);
+  });
+  termLog.scrollTop = termLog.scrollHeight;
 }
 
 async function termDisplayRanking(){
@@ -3182,7 +3193,7 @@ async function termRun(raw){
   }
 
   let m;
-  if((m = cmd.match(/^delete a bilan key=\{?\s*([^\s{}]+)\s*\}?$/i))){
+  if((m = cmd.match(/^delete a (?:bilan )?key=\{?\s*([^\s{}]+)\s*\}?$/i))){
     await termDeleteBilan(m[1]);
   } else if((m = cmd.match(/^consult information bilan key=\{?\s*([^\s{}]+)\s*\}?$/i))){
     await termConsultBilan(m[1]);
@@ -3221,4 +3232,5 @@ applySavedLayoutIfAny();
 </script>
 </body>
 </html>
+
 
