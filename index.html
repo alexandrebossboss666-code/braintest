@@ -1052,33 +1052,6 @@
     margin:0;
   }
 
-  /* ---------- Phrase cachée sous un "glaçon" à gratter ---------- */
-  .cmd-hint-wrap{
-    position:relative;
-    margin:18px 0 0;
-    padding:10px 12px;
-    text-align:center;
-  }
-  .cmd-hint{
-    margin:0;
-    font-size:0.85rem;
-    font-weight:700;
-    line-height:1.4;
-    color:#FF4422;
-    white-space:nowrap;
-  }
-  .ice-canvas{
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-    border-radius:10px;
-    touch-action:none;
-    cursor:crosshair;
-    transition:opacity .45s ease;
-  }
-  .ice-canvas.fading{ opacity:0; pointer-events:none; }
-
   /* ---------- Overlay recap A4 ---------- */
   .overlay{
     position:fixed; inset:0;
@@ -1196,11 +1169,10 @@
     background:#000;
     cursor:pointer;
     z-index:900;
-    display:none; align-items:center; justify-content:center;
+    display:flex; align-items:center; justify-content:center;
     box-shadow:0 4px 12px rgba(0,0,0,0.3);
     transition:transform .12s ease;
   }
-  .term-btn.unlocked{ display:flex; }
   .term-btn:hover{ transform:scale(1.08); }
   .term-btn svg{ width:22px; height:22px; }
   .term-panel{
@@ -2750,169 +2722,10 @@ function openInfoSheet(){
         <span class="badge nulle">Nulle</span>
       </div>
       <p class="info-outro">Ce site n'est qu'un simple site ludique.</p>
-      <div class="cmd-hint-wrap" id="cmdHintWrap">
-        <p class="cmd-hint">/!&#92; tape cmd dans avis /!&#92;</p>
-        <canvas class="ice-canvas" id="iceCanvas"></canvas>
-      </div>
     </div>
   `;
   overlay.classList.add('show');
   document.getElementById('closeSheet').addEventListener('click', () => overlay.classList.remove('show'));
-  requestAnimationFrame(initIceCover);
-}
-
-/* ===================== Glaçon à gratter (cache la phrase de l'outil cmd) ===================== */
-const ICE_PROGRESS_KEY = 'reflexion_ice_progress';   // image du glaçon partiellement gratté
-const ICE_ERASED_KEY = 'reflexion_ice_erased';       // 'true' quand il est entièrement parti
-
-function lsGet(key){ try{ return localStorage.getItem(key); } catch(e){ return null; } }
-function lsSet(key, value){ try{ localStorage.setItem(key, value); } catch(e){} }
-
-function drawIceCover(ctx, w, h){
-  ctx.clearRect(0, 0, w, h);
-  // Glace : blanc légèrement bleuté
-  const g = ctx.createLinearGradient(0, 0, w, h);
-  g.addColorStop(0, '#ffffff');
-  g.addColorStop(1, '#e8f3f9');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, w, h);
-  // Petites bulles / givre
-  ctx.fillStyle = 'rgba(190,214,228,0.35)';
-  for(let i = 0; i < Math.round(w * h / 90); i++){
-    ctx.beginPath();
-    ctx.arc(Math.random() * w, Math.random() * h, 0.5 + Math.random() * 1.3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  // Zones "fondues" : ronds où la glace est presque transparente (on devine le texte)
-  const holes = Math.max(4, Math.round(w / 55));
-  const spots = [];
-  for(let i = 0; i < holes; i++){
-    spots.push({
-      x: 10 + Math.random() * (w - 20),
-      y: 6 + Math.random() * (h - 12),
-      r: 9 + Math.random() * 14
-    });
-  }
-  ctx.save();
-  ctx.globalCompositeOperation = 'destination-out';
-  spots.forEach(sp => {
-    const rg = ctx.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, sp.r);
-    rg.addColorStop(0, 'rgba(0,0,0,0.68)');
-    rg.addColorStop(0.7, 'rgba(0,0,0,0.6)');
-    rg.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = rg;
-    ctx.beginPath();
-    ctx.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  ctx.restore();
-  // Fin contour des zones fondues
-  ctx.strokeStyle = 'rgba(170,200,218,0.55)';
-  ctx.lineWidth = 1;
-  spots.forEach(sp => {
-    ctx.beginPath();
-    ctx.arc(sp.x, sp.y, sp.r * 0.85, 0, Math.PI * 2);
-    ctx.stroke();
-  });
-  // Bord du glaçon
-  ctx.strokeStyle = '#cfe0ea';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(1, 1, w - 2, h - 2);
-}
-
-function initIceCover(){
-  const wrap = document.getElementById('cmdHintWrap');
-  const canvas = document.getElementById('iceCanvas');
-  if(!wrap || !canvas) return;
-  // La phrase tient sur une seule ligne : on réduit la police si la carte est trop étroite
-  const hint = wrap.querySelector('.cmd-hint');
-  let fs = 13.6;
-  hint.style.fontSize = fs + 'px';
-  while(hint.scrollWidth > wrap.clientWidth - 24 && fs > 7){
-    fs -= 0.5;
-    hint.style.fontSize = fs + 'px';
-  }
-  if(lsGet(ICE_ERASED_KEY) === 'true'){ canvas.remove(); return; }
-
-  const dpr = window.devicePixelRatio || 1;
-  const w = wrap.clientWidth, h = wrap.clientHeight;
-  canvas.width = Math.round(w * dpr);
-  canvas.height = Math.round(h * dpr);
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  const saved = lsGet(ICE_PROGRESS_KEY);
-  if(saved){
-    const img = new Image();
-    img.onload = () => {
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      ctx.restore();
-    };
-    img.onerror = () => drawIceCover(ctx, w, h);
-    img.src = saved;
-  } else {
-    drawIceCover(ctx, w, h);
-  }
-
-  function clearedRatio(){
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    let clear = 0, total = 0;
-    for(let i = 3; i < data.length; i += 16){ // un pixel sur quatre
-      total++;
-      if(data[i] < 40) clear++;
-    }
-    return total ? clear / total : 0;
-  }
-
-  let drawing = false, lastX = 0, lastY = 0;
-  function pos(e){
-    const r = canvas.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
-  }
-  function rub(x, y){
-    ctx.save();
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = 30;
-    ctx.strokeStyle = '#000';
-    ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    ctx.restore();
-    lastX = x; lastY = y;
-  }
-  canvas.addEventListener('pointerdown', (e) => {
-    drawing = true;
-    canvas.setPointerCapture(e.pointerId);
-    const p = pos(e);
-    lastX = p.x; lastY = p.y;
-    rub(p.x + 0.01, p.y);
-    e.preventDefault();
-  });
-  canvas.addEventListener('pointermove', (e) => {
-    if(!drawing) return;
-    const p = pos(e);
-    rub(p.x, p.y);
-  });
-  function endRub(){
-    if(!drawing) return;
-    drawing = false;
-    if(clearedRatio() > 0.85){
-      lsSet(ICE_ERASED_KEY, 'true');
-      try{ localStorage.removeItem(ICE_PROGRESS_KEY); } catch(e){}
-      canvas.classList.add('fading');
-      setTimeout(() => canvas.remove(), 500);
-    } else {
-      lsSet(ICE_PROGRESS_KEY, canvas.toDataURL('image/png'));
-    }
-  }
-  canvas.addEventListener('pointerup', endRub);
-  canvas.addEventListener('pointercancel', endRub);
 }
 
 /* ===================== Avis ===================== */
@@ -2924,18 +2737,6 @@ document.getElementById('sendAvisBtn').addEventListener('click', async () => {
   if(!texte){
     msg.style.color = '#c0342c';
     msg.innerHTML = errorLineHTML('Écris un avis avant d\'envoyer.');
-    return;
-  }
-  // Mot magique : débloque l'outil de commandes, sans enregistrer d'avis
-  if(texte.toLowerCase() === 'cmd'){
-    textarea.value = '';
-    if(lsGet(TERMINAL_UNLOCK_KEY) === 'true'){
-      msg.textContent = '';   // déjà débloqué : il ne se passe rien
-      return;
-    }
-    lsSet(TERMINAL_UNLOCK_KEY, 'true');
-    termBtn.classList.add('unlocked');
-    msg.textContent = 'Outil de cmd débloqué';
     return;
   }
   msg.textContent = 'Envoi…';
@@ -3177,8 +2978,6 @@ const termLog = document.getElementById('termLog');
 const termInput = document.getElementById('termInput');
 const termSuggest = document.getElementById('termSuggest');
 let termAwaitingRestore = false;
-const TERMINAL_UNLOCK_KEY = 'reflexion_terminal_unlocked';
-if(lsGet(TERMINAL_UNLOCK_KEY) === 'true') termBtn.classList.add('unlocked');
 
 function termPrint(text, kind){
   const line = document.createElement('p');
@@ -3433,6 +3232,7 @@ applySavedLayoutIfAny();
 </script>
 </body>
 </html>
+
 
 
 
