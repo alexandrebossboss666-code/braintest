@@ -1443,8 +1443,14 @@ function showExpertUnlockToast(text){
   }, 3000);
 }
 
+// Fait vibrer le téléphone (Android seulement ; sans effet sur iPhone et ordinateur)
+function vibrate(pattern){
+  try{ if(navigator.vibrate) navigator.vibrate(pattern); } catch(e){}
+}
+
 function shatterLockOverlay(overlayEl){
   if(!overlayEl){ return; }
+  vibrate([80, 40, 80, 40, 200]);
   const rect = overlayEl.getBoundingClientRect();
 
   const container = document.createElement('div');
@@ -1862,6 +1868,7 @@ async function revealAnswer(chosenBtn, correctBtn, isCorrect, labels){
   const mystery = card.querySelector('.mystery-card');
   await new Promise(r => setTimeout(r, 350));
   if(mystery){
+    vibrate(40);
     await flipButton(mystery, () => {
       mystery.textContent = labels[mystery.dataset.opt];
       mystery.classList.remove('mystery-card');
@@ -1870,6 +1877,7 @@ async function revealAnswer(chosenBtn, correctBtn, isCorrect, labels){
   await new Promise(r => setTimeout(r, 300));
   chosenBtn.classList.add(isCorrect ? 'correct' : 'wrong');
   if(!isCorrect && correctBtn) correctBtn.classList.add('correct');
+  vibrate(isCorrect ? 150 : [70, 50, 70]);
 }
 
 function renderLogoQuestion(index){
@@ -3232,6 +3240,7 @@ applySavedLayoutIfAny();
 </script>
 </body>
 </html>
+
 
 
 
