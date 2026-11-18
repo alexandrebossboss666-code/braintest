@@ -2975,6 +2975,7 @@ window.addEventListener('resize', refreshLayoutForViewport);
 const TERM_COMMANDS = [
   { usage: 'delete a bilan key={code}', desc: 'supprime ton bilan du serveur' },
   { usage: 'consult information bilan key={code}', desc: 'affiche la date, l\'heure et les secondes d\'enregistrement du bilan' },
+  { usage: 'consult information site',        desc: 'ouvre la page qui explique le site et sa création (nouvel onglet)' },
   { usage: 'display balance sheets',         desc: 'affiche le nombre de bilans enregistrés (normal et expert)' },
   { usage: 'display ranking',                desc: 'affiche le classement (prénoms et scores) en mode normal et expert' },
   { usage: 'help',                           desc: 'affiche toutes les commandes disponibles' },
@@ -3205,6 +3206,10 @@ async function termRun(raw){
     await termDeleteBilan(m[1]);
   } else if((m = cmd.match(/^consult information bilan key=\{?\s*([^\s{}]+)\s*\}?$/i))){
     await termConsultBilan(m[1]);
+  } else if(/^consult information site$/i.test(cmd)){
+    const w = window.open('index2.html', '_blank');
+    if(w) termPrint('Ouverture de la page d\'informations…', 'ok');
+    else termPrint('Le navigateur a bloqué l\'ouverture du nouvel onglet : autorise les pop-ups pour ce site.', 'err');
   } else if(/^help$/i.test(cmd)){
     termHelp();
   } else if(/^display ranking$/i.test(cmd)){
@@ -3240,6 +3245,7 @@ applySavedLayoutIfAny();
 </script>
 </body>
 </html>
+
 
 
 
