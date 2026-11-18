@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informations sur le site — Test de réflexion</title>
+<style>
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    padding:40px 16px;
+    background:#9b9b96;
+    font-family:'Inter',-apple-system,'Segoe UI',Roboto,sans-serif;
+    color:#26261f;
+    display:flex;
+    justify-content:center;
+  }
+  .a4{
+    width:min(210mm, 100%);
+    background:#fff;
+    padding:14mm 14mm 16mm;
+    box-shadow:0 8px 30px rgba(0,0,0,0.35);
+  }
+  @media (min-width:760px){
+    .a4{ min-height:297mm; }
+  }
+  .band{
+    border:2px solid #000;
+    border-radius:0;
+    text-align:center;
+    font-weight:800;
+    font-size:1.05rem;
+    padding:10px 14px;
+    margin:0 0 16px;
+  }
+  .band.site{ background:#65D2EB; }
+  .band.tech{ background:#FF3D3D; margin-top:30px; }
+  .a4 p, .a4 li{
+    font-size:0.92rem;
+    line-height:1.6;
+    margin:0 0 12px;
+    text-align:left;
+  }
+  .a4 ul{ margin:0 0 12px; padding-left:20px; }
+  .a4 li{ margin-bottom:6px; }
+  .a4 h3{
+    font-size:0.95rem;
+    margin:18px 0 8px;
+  }
+  @media print{
+    body{ background:#fff; padding:0; }
+    .a4{ box-shadow:none; width:100%; min-height:0; }
+    @page{ size:A4; margin:10mm; }
+  }
+</style>
+</head>
+<body>
+  <main class="a4">
+
+    <div class="band site">Partie site</div>
+
+    <p>Le <strong>test de réflexion</strong> est un petit site ludique qui met à l'épreuve ton sens de l'observation et ton oreille dans trois domaines : les <strong>logos</strong>, les <strong>couleurs</strong> et les <strong>notes de musique</strong>.</p>
+
+    <h3>Comment ça fonctionne</h3>
+    <p>Tu remplis d'abord une fiche (nom, prénom, date de naissance, genre, et une photo si tu le souhaites), puis tu choisis le mode normal ou le mode expert et tu lances le test.</p>
+    <p>À chaque question à trois choix, l'une des étiquettes est cachée derrière un « ? » orange : quelle que soit ta réponse, il se retourne pour révéler ce qu'il cachait, puis ta réponse passe au vert si elle est bonne et au rouge sinon. Pour les couleurs, il faut retrouver une teinte qui t'a été montrée : plus ta réponse est proche de la vraie couleur, meilleur est ton score. Pour les notes, tu écoutes des sons et tu dois retrouver ce qui a été joué.</p>
+    <p>À la fin, chaque domaine reçoit un badge allant de <strong>Nulle</strong> à <strong>Extra</strong>, et un <strong>bilan</strong> est créé avec un code personnel. Tu peux le retrouver plus tard avec ce code, l'enregistrer en PDF, ou le supprimer du serveur si tu ne souhaites pas le garder. Tu peux aussi choisir de ne pas l'enregistrer en ligne : il reste alors uniquement dans ton navigateur.</p>
+    <p>Le <strong>mode expert</strong>, plus difficile, est verrouillé au départ : il se débloque en obtenant le badge Extra dans les trois domaines en mode normal, puis en recevant un code par e-mail. Une zone d'avis permet enfin de laisser un commentaire.</p>
+
+    <h3>Pourquoi ce site ?</h3>
+    <p>Ce site est avant tout un projet de loisir. Il a été créé pour s'amuser, pour faire tester ses proches et surtout pour apprendre en transformant des idées en vraies fonctionnalités, une étape après l'autre. Il n'a rien de sérieux : ce n'est qu'un simple site ludique.</p>
+
+    <div class="band tech">Partie technique</div>
+
+    <p>Le site est construit sans framework : chaque page est un <strong>fichier unique en HTML, CSS et JavaScript</strong>, hébergé gratuitement avec <strong>GitHub Pages</strong>. Il est découpé en plusieurs pages : le test, la page de réception du code expert, une page d'administration et cette page d'informations.</p>
+
+    <h3>Les services utilisés</h3>
+    <ul>
+      <li><strong>Supabase</strong> : base de données (bilans, avis, paramètres, codes experts), règles d'accès (RLS), stockage des photos, temps réel pour le mode maintenance et une fonction serveur qui permet de supprimer un bilan avec son code.</li>
+      <li><strong>EmailJS</strong> : envoi de l'e-mail contenant le code à 6 chiffres du mode expert, valable 10 minutes et utilisable une seule fois.</li>
+    </ul>
+
+    <h3>Les fonctionnalités</h3>
+    <ul>
+      <li><strong>Stockage local</strong> (localStorage) : mémorise le mode expert débloqué, la liste des bilans et la disposition des blocs.</li>
+      <li><strong>Web Audio API</strong> : génère les notes et les accords directement dans le navigateur.</li>
+      <li><strong>Calcul de proximité des couleurs</strong> : distance entre deux couleurs à partir de leurs valeurs RGB, pondérée selon la sensibilité de l'œil, convertie en score de 0 à 100.</li>
+      <li><strong>Bilan en PDF</strong> : généré côté navigateur avec html2pdf.js.</li>
+      <li><strong>Animations et interactions</strong> : étiquettes qui se retournent en 3D, cadenas qui explose, glisser-déposer pour réorganiser les blocs en mode édition (avec aimantation sur une grille), et vibrations sur téléphone Android.</li>
+      <li><strong>Mode maintenance</strong> : activé depuis la page d'administration, il verrouille le site en temps réel sans interrompre un test déjà commencé.</li>
+      <li><strong>Invite de commandes</strong> : un petit terminal accessible par le bouton noir en bas à gauche (supprimer un bilan, consulter ses informations, afficher le classement, réinitialiser le site…).</li>
+      <li><strong>Protections côté navigateur</strong> : détection de modifications dans l'inspecteur, avec rechargement automatique de la page.</li>
+    </ul>
+    <p>Ces protections restent limitées : tout ce qui s'exécute dans le navigateur peut être contourné par quelqu'un qui s'y connaît. Une vraie sécurité demanderait des vérifications côté serveur.</p>
+
+  </main>
+</body>
+</html>
