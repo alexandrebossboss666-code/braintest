@@ -1,0 +1,23 @@
+{
+  "name": "editeur-de-tests",
+  "version": "1.0.0",
+  "description": "Éditeur de tests pour le site Test de réflexion",
+  "main": "main.js",
+  "author": "braintest",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "io.github.braintest.editeur",
+    "productName": "Editeur de tests",
+    "files": ["main.js", "editeur.html"],
+    "directories": { "output": "dist" },
+    "win": { "target": "portable" },
+    "portable": { "artifactName": "Editeur-de-tests.exe" }
+  }
+}

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Éditeur de tests</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--card:#E7E7E5;--bd:#5c5c58;--gray:#c7c7c4;--acc:#FFBA6B;--accd:#e8a04f;--red:#c0342c;--ink:#26261f;--ok:#8bc46a}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#fff;font-family:'Inter',sans-serif;color:var(--ink)}
+h2,.d{font-family:'Space Grotesk',sans-serif}
+button{font-family:inherit;cursor:pointer}
+.corner{position:fixed;top:0;left:0;width:0;height:0;border-top:90px solid var(--red);border-right:90px solid transparent;z-index:5}
+
+/* Accueil */
+#home{min-height:100vh;display:flex;position:relative}
+.grid{position:absolute;inset:0 auto 0 0;width:55%;background-image:linear-gradient(#d9d9d6 1px,transparent 1px),linear-gradient(90deg,#d9d9d6 1px,transparent 1px);background-size:32px 32px;-webkit-mask-image:linear-gradient(90deg,#000 30%,transparent);mask-image:linear-gradient(90deg,#000 30%,transparent)}
+.side{position:relative;width:300px;margin:120px 0 40px 60px}
+.newbtn{width:100%;height:70px;border:2px solid #8f8f8a;background:var(--gray);border-radius:0;font:700 2rem 'Space Grotesk',sans-serif}
+.newbtn:hover{background:#b7b7b3}
+.col{margin-top:16px;background:#fff;border:2px solid #1c1c18;border-radius:16px;overflow:hidden}
+.col h2{margin:0;padding:14px 10px 10px;text-align:center;font-size:1.05rem;border-bottom:2px solid #1c1c18}
+#list{padding:12px;max-height:55vh;overflow-y:auto}
+.t{position:relative;background-color:#4a4a47;background-image:linear-gradient(rgba(210,210,206,.25) 1px,transparent 1px),linear-gradient(90deg,rgba(210,210,206,.25) 1px,transparent 1px);background-size:14px 14px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5);border:2px solid #2c2c2a;border-radius:0;clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,0 100%);padding:18px 10px;margin-bottom:10px;text-align:center;font:600 .95rem 'Space Grotesk',sans-serif;cursor:pointer;word-break:break-word}
+.t:hover{background-color:#5c5c58}
+.empty{margin:14px 6px;text-align:center;font-size:.8rem;color:#8a8a85}
+.pub{position:absolute;top:6px;right:24px;width:14px;height:16px;filter:drop-shadow(2px 2px 0 #2f5fa3)}
+.pub::before{content:"";position:absolute;left:0;top:0;border:7px solid transparent;border-top:0;border-bottom:8px solid #FFD43B}
+.pub::after{content:"";position:absolute;left:4px;top:8px;width:6px;height:8px;background:#FFD43B}
+.cond{font-size:.85rem;line-height:1.5;margin:0 0 14px}
+.box .chk{display:flex;gap:8px;align-items:center;font-size:.85rem;font-weight:600;cursor:pointer;margin:0}
+.box .chk input{width:auto;padding:0}
+#tmenu{position:fixed;display:none;background:#fff;border:2px solid #1c1c18;border-radius:12px;overflow:hidden;z-index:20}
+#tmenu.show{display:block}
+#tmenu button,.qmenu button{display:block;width:100%;border:none;background:#fff;padding:11px 12px;text-align:left;font-size:.88rem;font-weight:600}
+#tmenu button:hover:not(:disabled),.qmenu button:hover{background:#f2f2ef}
+#tmenu button:disabled{color:#a5a5a1;cursor:not-allowed}
+#tmenu #tDel{color:#c0342c}
+
+/* Fenêtre de nom */
+.ov{position:fixed;inset:0;background:rgba(20,20,18,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+.ov.show{display:flex}
+.box{background:#fff;border:2px solid #1c1c18;border-radius:10px;width:340px;max-width:100%;padding:26px}
+.box label{display:block;font-weight:600;font-size:.9rem;margin-bottom:8px}
+.box input{width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #9b9b96;background:#fbfbfa;font:inherit}
+.box input:focus{outline:2px solid var(--accd);outline-offset:1px}
+.create{display:block;width:100%;margin-top:18px;border:none;border-radius:14px;padding:12px;background:var(--red);color:#fff;font:600 .95rem 'Space Grotesk',sans-serif}
+.create:hover{background:#a82c25}
+
+/* Éditeur */
+#editor,#play{display:none;min-height:100vh}
+.tools{width:84px;flex-shrink:0;background:#EDEDEB;border-right:2px solid #1c1c18;padding:110px 8px 16px;text-align:center;font-size:.72rem;color:#6b6b67;line-height:1.4}
+.tools b{display:block;color:var(--ink);font-family:'Space Grotesk',sans-serif}
+.stage{flex:1;display:flex;flex-direction:column;align-items:center;padding:40px 20px 110px}
+.tname{font-weight:700;font-size:1.1rem;margin-bottom:14px;text-align:center}
+.card{background:var(--card);border:2px solid var(--bd);border-radius:22px;width:520px;max-width:100%;min-height:380px;padding:26px 32px 24px;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+.prog{text-align:center;font-size:.75rem;font-weight:600;letter-spacing:.04em;color:#6b6b67;margin-bottom:12px}
+.qt{width:100%;resize:none;border:1.5px dashed transparent;background:transparent;border-radius:10px;padding:8px;text-align:center;font:600 1.05rem 'Inter',sans-serif;color:var(--ink);margin-bottom:14px}
+.qt:hover,.qt:focus{border-color:#9b9b96;background:#f3f3f1;outline:none}
+.opts{flex:1}
+.ch{position:relative;width:78%;margin:0 auto 12px;padding:5px 12%;background:var(--gray);border:1.5px solid #8f8f8a;border-radius:12px;cursor:pointer}
+.ch:hover{background:#b7b7b3}
+.ch.on{background:var(--ok);border-color:#3f7a2b}
+.ch input{width:100%;border:none;background:transparent;text-align:center;font:600 .95rem 'Inter',sans-serif;color:var(--ink);padding:7px 0;border-radius:6px;cursor:text}
+.ch input:focus{outline:none;background:rgba(255,255,255,.55)}
+.x{position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px 7px;border-radius:6px;font-size:.8rem;font-weight:700;color:#5c1414;cursor:pointer}
+.x:hover{background:rgba(255,255,255,.6)}
+.ch.sel{background:var(--acc);border-color:var(--accd)}
+.ch.bad{background:#e05252;border-color:#9c2b2b}
+.ch .l{display:block;text-align:center;font:600 .95rem 'Inter',sans-serif;padding:7px 0}
+.vb.go{opacity:1;cursor:pointer}
+.vb.go:hover{background:var(--accd)}
+.pq{text-align:center;font:600 1.05rem 'Inter',sans-serif;margin:0 0 16px;word-break:break-word}
+.rec{text-align:left;font-size:.85rem;font-weight:600;padding:8px 10px;margin-bottom:8px;border-radius:10px;border:1.5px solid;word-break:break-word}
+.rec small{font-weight:400}
+.rec.ok{background:#e3f3da;border-color:#3f7a2b}
+.rec.ko{background:#f8dcdc;border-color:#c0342c}
+.addc{display:block;width:78%;margin:0 auto 12px;padding:10px;border:1.5px dashed #8f8f8a;border-radius:12px;background:transparent;font-size:1.2rem;font-weight:700}
+.addc:hover{background:#dcdcd9}
+.ans{display:block;width:78%;margin:0 auto 14px;padding:11px 12px;border:1.5px solid #8f8f8a;border-radius:12px;background:#fbfbfa;text-align:center;font:600 .95rem 'Inter',sans-serif}
+.ans:focus{outline:2px solid var(--accd);outline-offset:1px}
+.vb{display:block;margin:6px auto 0;border:none;border-radius:14px;padding:11px 24px;background:var(--acc);color:#3a2408;font:600 .92rem 'Space Grotesk',sans-serif;opacity:.75;cursor:default}
+.hint{margin:10px 8px 0;text-align:center;font-size:.72rem;color:#6b6b67;line-height:1.4}
+.foot{display:flex;justify-content:space-between;margin-top:18px;position:relative}
+.sq{position:relative;width:46px;height:46px;border:2px solid #8f8f8a;background:var(--gray);border-radius:8px;padding:0}
+.sq:hover:not(:disabled){background:#b7b7b3}
+.sq:disabled{opacity:.4;cursor:not-allowed}
+.sq.l::before,.sq.r::before{content:"";position:absolute;top:14px;width:14px;height:14px;border:solid var(--ink);border-width:0 0 4px 4px;transform:rotate(45deg)}
+.sq.l::before{left:16px}
+.sq.r::before{left:10px;border-width:4px 4px 0 0}
+.sq.p::before,.sq.p::after{content:"";position:absolute;background:var(--ink);border-radius:2px}
+.sq.p::before{left:10px;top:19px;width:22px;height:4px}
+.sq.p::after{left:19px;top:10px;width:4px;height:22px}
+.qmenu{position:absolute;right:0;bottom:56px;width:250px;background:#fff;border:2px solid #1c1c18;border-radius:12px;overflow:hidden;display:none;z-index:10}
+.qmenu.show{display:block}
+.msg{min-height:1.2em;margin:14px 0 0;font-size:.85rem;font-weight:600;color:var(--red);text-align:center}
+.fin{position:fixed;right:24px;bottom:24px;border:none;border-radius:14px;padding:13px 22px;background:var(--acc);color:#3a2408;font:600 .95rem 'Space Grotesk',sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:6}
+.fin:hover{background:var(--accd)}
+@media (max-width:760px){.side{margin-left:20px;width:calc(100% - 40px)}.tools{display:none}.card{padding:22px 18px}}
+</style>
+</head>
+<body>
+<div class="corner"></div>
+
+<div id="home">
+  <div class="grid"></div>
+  <div class="side">
+    <button class="newbtn" id="newBtn" aria-label="Créer un test">+</button>
+    <div class="col"><h2>Tests créés</h2><div id="list"></div></div>
+  </div>
+</div>
+
+<div id="tmenu"><button id="tEdit">Éditer le test</button><button id="tTry">Essayer le test</button><button id="tPub">Publier le test</button><button id="tDel">Supprimer le test</button></div>
+
+<div class="ov" id="ov">
+  <div class="box">
+    <label for="nameIn">Nom du test</label>
+    <input id="nameIn" maxlength="40" autocomplete="off">
+    <button class="create" id="createBtn">Créer</button>
+  </div>
+</div>
+
+<div class="ov" id="pov">
+  <div class="box">
+    <h2 class="d" style="margin:0 0 12px;font-size:1.05rem;text-align:center">Conditions de publication</h2>
+    <p class="cond">En publiant ce test, je confirme qu’il ne contient aucun contenu illégal, haineux, violent ou sexuel, ni donnée personnelle. Il sera visible et jouable par tous les visiteurs du site, et l’administrateur peut le supprimer à tout moment.</p>
+    <label class="chk"><input type="checkbox" id="pAcc"> J’accepte ces conditions</label>
+    <p class="msg" id="pMsg"></p>
+    <div style="display:flex;gap:10px">
+      <button class="create" id="pNo" style="width:auto;flex:1;margin-top:8px;background:var(--gray);color:var(--ink)">Annuler</button>
+      <button class="create" id="pYes" style="width:auto;flex:1;margin-top:8px" disabled>Publier</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="cov">
+  <div class="box">
+    <p id="cmsg" style="margin:0;font-weight:600;line-height:1.4"></p>
+    <div style="display:flex;gap:10px">
+      <button class="create" id="cNo" style="width:auto;flex:1;background:var(--gray);color:var(--ink)">Annuler</button>
+      <button class="create" id="cYes" style="width:auto;flex:1">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<div id="editor">
+  <aside class="tools"><b>Outils</b>à venir</aside>
+  <main class="stage">
+    <div class="tname d" id="tname"></div>
+    <div class="card" id="card"></div>
+    <p class="msg" id="msg"></p>
+  </main>
+  <button class="fin" id="finBtn">Terminer la création du test</button>
+</div>
+
+<div id="play">
+  <main class="stage">
+    <div class="tname d" id="ptitle"></div>
+    <div class="card" id="pcard"></div>
+  </main>
+  <button class="fin" id="pquit">Quitter l’essai</button>
+</div>
+
+<script>
+const K = "braintest_editor_tests", MAXQ = 10, MAXC = 4;
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let tests = load(), cur = null, qi = 0, editId = null;
+
+function load(){ try{ return JSON.parse(localStorage.getItem(K)) || []; }catch(e){ return []; } }
+function save(){ try{ localStorage.setItem(K, JSON.stringify(tests)); }catch(e){} }
+function newQ(type){ return { type, text:"", choices: type === "text" ? [] : [{ t:"Choix 1", ok:false }], answer:"" }; }
+function show(v){ $("#home").style.display = v === "home" ? "flex" : "none"; $("#editor").style.display = v === "ed" ? "flex" : "none"; $("#play").style.display = v === "play" ? "flex" : "none"; }
+
+/* ---------- Accueil ---------- */
+function renderList(){
+  const l = $("#list");
+  l.innerHTML = tests.length
+    ? tests.map(t => `<div class="t" data-id="${esc(t.id)}">${t.pub ? '<span class="pub" title="Test publié"></span>' : ""}${esc(t.name)}</div>`).join("")
+    : '<p class="empty">Aucun test pour le moment. Clique sur + pour en créer un.</p>';
+  l.querySelectorAll(".t").forEach(el => el.onclick = e => {
+    e.stopPropagation();
+    const m = $("#tmenu"), r = el.getBoundingClientRect();
+    m.style.left = r.left + "px"; m.style.top = (r.bottom + 6) + "px"; m.style.width = r.width + "px";
+    m.dataset.id = el.dataset.id;
+    const tt = tests.find(x => x.id === el.dataset.id);
+    $("#tPub").textContent = tt && tt.pub ? "Mettre à jour la publication" : "Publier le test";
+    m.classList.add("show");
+  });
+}
+document.addEventListener("click", () => { $("#tmenu").classList.remove("show"); const q = $("#qmenu"); if(q) q.classList.remove("show"); });
+
+$("#newBtn").onclick = () => { $("#nameIn").value = ""; $("#ov").classList.add("show"); $("#nameIn").focus(); };
+$("#ov").onclick = e => { if(e.target === $("#ov")) $("#ov").classList.remove("show"); };
+function createTest(){
+  const name = $("#nameIn").value.trim();
+  if(!name){ $("#nameIn").focus(); return; }
+  cur = { id: Date.now().toString(36), name, questions:[newQ("single")] };
+  editId = null; qi = 0;
+  $("#ov").classList.remove("show");
+  show("ed"); renderEd();
+}
+$("#createBtn").onclick = createTest;
+$("#nameIn").onkeydown = e => { if(e.key === "Enter") createTest(); };
+$("#tEdit").onclick = () => {
+  const t = tests.find(x => x.id === $("#tmenu").dataset.id);
+  if(!t) return;
+  editId = t.id; cur = JSON.parse(JSON.stringify(t)); qi = 0;
+  show("ed"); renderEd();
+};
+
+/* ---------- Essai du test ---------- */
+let pt = null, pi = 0, pans = [], ptok = 0;
+const norm = s => String(s).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+$("#tTry").onclick = () => {
+  const t = tests.find(x => x.id === $("#tmenu").dataset.id);
+  if(t){ pt = t; pi = 0; pans = []; ptok++; show("play"); renderPlay(); }
+};
+function quitPlay(){ ptok++; pt = null; show("home"); }
+$("#pquit").onclick = quitPlay;
+
+function renderPlay(){
+  $("#ptitle").textContent = pt.name + " · essai";
+  const q = pt.questions[pi], n = pt.questions.length;
+  let b = "";
+  if(q.type === "text") b = '<input id="pans" class="ans" maxlength="80" placeholder="Ta réponse" autocomplete="off"><button class="vb go" id="pval">Valider</button>';
+  else {
+    b = q.choices.map((c, i) => `<div class="ch pc" data-i="${i}"><span class="l">${esc(c.t)}</span></div>`).join("");
+    if(q.type === "multi") b += '<button class="vb go" id="pval">Valider</button>';
+  }
+  $("#pcard").innerHTML = `<div class="prog">Question ${pi + 1} / ${n}</div><p class="pq">${esc(q.text)}</p><div class="opts">${b}</div><p class="msg" id="pfb"></p>`;
+  const els = [...document.querySelectorAll(".pc")];
+  let done = false;
+  const endQ = (good, fb) => {
+    done = true; pans[pi] = good; const k = ptok;
+    $("#pfb").style.color = good ? "#3f7a2b" : "#c0342c";
+    $("#pfb").textContent = fb;
+    setTimeout(() => { if(k !== ptok) return; pi++; pi < n ? renderPlay() : endPlay(); }, 1100);
+  };
+  if(q.type === "single"){
+    els.forEach(d => d.onclick = () => {
+      if(done) return;
+      const c = q.choices[d.dataset.i];
+      els.forEach(e => { if(q.choices[e.dataset.i].ok) e.classList.add("on"); });
+      if(!c.ok) d.classList.add("bad");
+      endQ(c.ok, c.ok ? "Bonne réponse !" : "Pas tout à fait…");
+    });
+  } else if(q.type === "multi"){
+    els.forEach(d => d.onclick = () => { if(!done) d.classList.toggle("sel"); });
+    $("#pval").onclick = () => {
+      if(done) return;
+      let good = true;
+      els.forEach(d => {
+        const c = q.choices[d.dataset.i], sel = d.classList.contains("sel");
+        if(c.ok !== sel) good = false;
+        d.classList.remove("sel");
+        if(c.ok) d.classList.add("on"); else if(sel) d.classList.add("bad");
+      });
+      endQ(good, good ? "Bonne réponse !" : "Pas tout à fait…");
+    };
+  } else {
+    const inp = $("#pans");
+    const go = () => {
+      if(done) return;
+      const good = norm(inp.value) === norm(q.answer);
+      inp.disabled = true;
+      endQ(good, good ? "Bonne réponse !" : "La réponse était : " + q.answer);
+    };
+    $("#pval").onclick = go;
+    inp.onkeydown = e => { if(e.key === "Enter") go(); };
+    inp.focus();
+  }
+}
+
+function endPlay(){
+  const n = pt.questions.length, g = pans.filter(Boolean).length;
+  const rec = pt.questions.map((q, i) => {
+    const ans = q.type === "text" ? q.answer : q.choices.filter(c => c.ok).map(c => c.t).join(", ");
+    return `<div class="rec ${pans[i] ? "ok" : "ko"}">${i + 1}. ${esc(q.text)}<br><small>Bonne réponse : ${esc(ans)}</small></div>`;
+  }).join("");
+  $("#pcard").innerHTML = `<div class="prog">Essai terminé</div><p class="pq">${g} / ${n} bonnes réponses</p><div class="opts">${rec}</div><button class="vb go" id="pback">Retour aux tests</button>`;
+  $("#pback").onclick = quitPlay;
+}
+
+/* ---------- Publication (Supabase) ---------- */
+const SB_URL = "https://alrcdwhyrgqqrfyxqklg.supabase.co", SB_KEY = "sb_publishable_AXSZBIjcBZbAVosgFccfYQ_dUVhaXa0";
+let sb = null, pubId = null;
+try{ sb = window.supabase.createClient(SB_URL, SB_KEY, { auth:{ persistSession:false, autoRefreshToken:false, detectSessionInUrl:false } }); }catch(e){}
+const newKey = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+$("#tPub").onclick = () => {
+  const t = tests.find(x => x.id === $("#tmenu").dataset.id);
+  if(!t) return;
+  pubId = t.id; $("#pAcc").checked = false; $("#pYes").disabled = true; $("#pMsg").textContent = "";
+  $("#pov").classList.add("show");
+};
+$("#pAcc").onchange = e => { $("#pYes").disabled = !e.target.checked; };
+$("#pNo").onclick = () => $("#pov").classList.remove("show");
+$("#pov").onclick = e => { if(e.target === $("#pov")) $("#pov").classList.remove("show"); };
+$("#pYes").onclick = async () => {
+  const t = tests.find(x => x.id === pubId), msg = $("#pMsg");
+  if(!t) return;
+  if(!sb){ msg.style.color = "#c0342c"; msg.textContent = "Connexion impossible : vérifie ta connexion internet."; return; }
+  $("#pYes").disabled = true; msg.style.color = "#26261f"; msg.textContent = "Publication…";
+  const key = t.pub ? t.pub.key : newKey();
+  const { data, error } = await sb.rpc("publish_quiz", { p_id: t.pub ? t.pub.id : null, p_key: key, p_name: t.name, p_questions: t.questions });
+  if(error){ msg.style.color = "#c0342c"; msg.textContent = "Erreur : " + (error.message || "inconnue"); $("#pYes").disabled = false; return; }
+  t.pub = { id: data, key }; save(); renderList();
+  $("#pov").classList.remove("show");
+};
+
+let delId = null;
+$("#tDel").onclick = () => {
+  const t = tests.find(x => x.id === $("#tmenu").dataset.id);
+  if(!t) return;
+  delId = t.id;
+  $("#cmsg").textContent = "Supprimer définitivement le test « " + t.name + " » ?";
+  $("#cov").classList.add("show");
+};
+$("#cNo").onclick = () => $("#cov").classList.remove("show");
+$("#cov").onclick = e => { if(e.target === $("#cov")) $("#cov").classList.remove("show"); };
+$("#cYes").onclick = async () => {
+  const t = tests.find(x => x.id === delId);
+  if(t && t.pub){
+    if(!sb){ $("#cmsg").textContent = "Connexion impossible : le test publié ne peut pas être retiré."; return; }
+    const { error } = await sb.rpc("unpublish_quiz", { p_id: t.pub.id, p_key: t.pub.key });
+    if(error){ $("#cmsg").textContent = "Impossible de dépublier : " + (error.message || "erreur inconnue"); return; }
+  }
+  tests = tests.filter(x => x.id !== delId);
+  save(); renderList();
+  $("#cov").classList.remove("show");
+};
+
+/* ---------- Éditeur ---------- */
+function renderEd(){
+  $("#msg").textContent = "";
+  $("#tname").textContent = cur.name;
+  const n = cur.questions.length, q = cur.questions[qi], last = qi === n - 1;
+  const lbl = { single:"Choix unique", multi:"Choix multiples", text:"Réponse écrite" }[q.type];
+  let b = "";
+  if(q.type === "text"){
+    b = `<input id="ans" class="ans" maxlength="80" placeholder="Écris ici la bonne réponse" value="${esc(q.answer)}"><button class="vb" tabindex="-1">Valider</button>`;
+  } else {
+    b = q.choices.map((c, i) => `<div class="ch${c.ok ? " on" : ""}" data-i="${i}"><input maxlength="60" value="${esc(c.t)}">${q.choices.length > 1 ? '<span class="x" title="Supprimer ce choix">✕</span>' : ""}</div>`).join("");
+    if(q.choices.length < MAXC) b += '<button class="addc" id="addc">+</button>';
+    if(q.type === "multi") b += '<button class="vb" tabindex="-1">Valider</button>';
+    b += '<p class="hint">Clique sur le contour d’un choix pour en faire la bonne réponse (re-clique pour annuler), ou sur le texte pour le modifier. Le ✕ supprime un choix.</p>';
+  }
+  $("#card").innerHTML = `
+    <div class="prog">Question ${qi + 1} / ${MAXQ} · ${lbl}</div>
+    <textarea id="qt" class="qt" rows="2" maxlength="200" placeholder="Écris ta question ici">${esc(q.text)}</textarea>
+    <div class="opts">${b}</div>
+    <div class="foot">
+      <button class="sq l" id="prev" aria-label="Question précédente" ${qi === 0 ? "disabled" : ""}></button>
+      <button class="sq ${last ? "p" : "r"}" id="nxt" aria-label="${last ? "Ajouter une question" : "Question suivante"}" ${last && n >= MAXQ ? "disabled" : ""}></button>
+      <div class="qmenu" id="qmenu">
+        <button data-t="single">Question à choix unique</button>
+        <button data-t="multi">Question à choix multiples</button>
+        <button data-t="text">Question avec champ de texte</button>
+      </div>
+    </div>`;
+
+  $("#qt").oninput = e => { q.text = e.target.value; };
+  const a = $("#ans"); if(a) a.oninput = e => { q.answer = e.target.value; };
+  document.querySelectorAll(".ch").forEach(d => {
+    const c = q.choices[d.dataset.i];
+    d.querySelector("input").oninput = e => { c.t = e.target.value; };
+    d.onclick = e => {
+      if(e.target.tagName === "INPUT") return;
+      if(e.target.classList.contains("x")){ q.choices.splice(+d.dataset.i, 1); let k = 0; const mx = Math.max(1, q.choices.length - 1); q.choices.forEach(x => { if(x.ok && ++k > mx) x.ok = false; }); renderEd(); return; }
+      if(q.type === "single"){ const was = c.ok; q.choices.forEach(x => x.ok = false); c.ok = !was; }
+      else {
+        const mx = Math.max(1, q.choices.length - 1);
+        if(!c.ok && q.choices.filter(x => x.ok).length >= mx){
+          renderEd();
+          $("#msg").textContent = "Maximum " + mx + " bonne" + (mx > 1 ? "s" : "") + " réponse" + (mx > 1 ? "s" : "") + " pour " + q.choices.length + " choix.";
+          return;
+        }
+        c.ok = !c.ok;
+      }
+      renderEd();
+    };
+  });
+  const ac = $("#addc");
+  if(ac) ac.onclick = () => { q.choices.push({ t:"Choix " + (q.choices.length + 1), ok:false }); renderEd(); };
+  $("#prev").onclick = () => { qi--; renderEd(); };
+  $("#nxt").onclick = e => {
+    e.stopPropagation();
+    if(!last){ qi++; renderEd(); } else $("#qmenu").classList.toggle("show");
+  };
+  $("#qmenu").querySelectorAll("button").forEach(btn => btn.onclick = () => {
+    cur.questions.push(newQ(btn.dataset.t)); qi = cur.questions.length - 1; renderEd();
+  });
+}
+
+$("#finBtn").onclick = () => {
+  for(let i = 0; i < cur.questions.length; i++){
+    const q = cur.questions[i]; let p = "";
+    if(!q.text.trim()) p = "écris la question.";
+    else if(q.type === "text" ? !q.answer.trim() : !q.choices.some(c => c.ok)) p = q.type === "text" ? "écris la bonne réponse." : "choisis la bonne réponse.";
+    else if(q.type !== "text" && q.choices.some(c => !c.t.trim())) p = "un choix est vide.";
+    if(p){ qi = i; renderEd(); $("#msg").textContent = "Question " + (i + 1) + " : " + p; return; }
+  }
+  if(editId) tests = tests.map(t => t.id === editId ? cur : t); else tests.push(cur);
+  save(); cur = null; editId = null;
+  renderList(); show("home");
+};
+
+renderList();
+</script>
+</body>
+</html>
