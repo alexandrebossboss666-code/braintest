@@ -2,6 +2,9 @@
    À charger APRÈS le script principal du site (voir la ligne à ajouter avant </body>). */
 (function(){
   const KEY = "braintest_public_bilans";
+  // Commande secrète (non listée dans les suggestions ni dans « help ») et lien du logiciel
+  const SECRET_CMD = "get the editor";
+  const EDITOR_URL = "https://github.com/alexandrebossboss666-code/braintest/releases/latest/download/Editeur-de-tests.exe";
   const $id = id => document.getElementById(id);
   const norm = s => String(s).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   function load(){
@@ -19,7 +22,18 @@
 .qp-quit{text-align:center;font-size:.78rem;font-weight:600;color:#6b6b67;text-decoration:underline;cursor:pointer;margin:14px 0 0}
 .qp-rec{text-align:left;font-size:.88rem;padding:10px 12px;margin-bottom:10px;border-radius:10px;border:1.5px solid}
 .qp-rec.ok{background:#e3f3da;border-color:#3f7a2b}
-.qp-rec.ko{background:#f8dcdc;border-color:#c0342c}`;
+.qp-rec.ko{background:#f8dcdc;border-color:#c0342c}
+.dl-box{position:relative;width:min(340px,100%);aspect-ratio:1/1;background:#fff;border:2px solid #1c1c18;border-radius:10px;padding:22px;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.35);font-family:'Inter',sans-serif;color:#26261f}
+.dl-x{position:absolute;top:10px;right:14px;cursor:pointer;font-size:1.1rem;color:#666}
+.dl-text{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:.88rem;line-height:1.5}
+.dl-text h2{font-family:'Space Grotesk',sans-serif;margin:0 0 10px;font-size:1.2rem}
+.dl-text p{margin:0 0 8px}
+.dl-text small{color:#6b6b67;font-size:.74rem;line-height:1.4}
+.dl-btn{display:flex;align-items:center;justify-content:center;border-radius:14px;padding:12px;background:var(--accent);color:#3a2408;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:.95rem;text-decoration:none}
+.dl-btn:hover{background:var(--accent-dark)}
+.dl-arrow{position:relative;display:inline-block;width:16px;height:18px;margin-left:10px}
+.dl-arrow::before{content:"";position:absolute;left:6px;top:0;width:3px;height:14px;background:currentColor}
+.dl-arrow::after{content:"";position:absolute;left:3px;top:4px;width:10px;height:10px;border:solid currentColor;border-width:0 3px 3px 0;transform:rotate(45deg)}`;
   document.head.appendChild(st);
 
   /* ---------- Bilans « Quiz public » dans la colonne Bilan ---------- */
@@ -139,6 +153,23 @@
     } catch(e){ termPrint("Erreur de connexion, réessaie.", "err"); }
   }
 
+  /* ---------- Fenêtre de téléchargement du logiciel ---------- */
+  function openDownload(){
+    if($id("dlOv")) return;
+    const ov = document.createElement("div");
+    ov.id = "dlOv";
+    ov.style.cssText = "position:fixed;inset:0;background:rgba(20,20,18,.55);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px";
+    ov.innerHTML = '<div class="dl-box"><span class="dl-x" id="dlX">✕</span>'
+      + '<div class="dl-text"><h2>Éditeur de tests</h2>'
+      + '<p>Crée tes propres tests, puis publie-les sur le site : tout le monde pourra les lancer avec la commande « run a test ».</p>'
+      + '<small>Pour Windows. Si Windows affiche un avertissement, clique sur « Informations complémentaires » puis « Exécuter quand même ».</small></div>'
+      + '<a class="dl-btn" href="' + EDITOR_URL + '">Télécharger<span class="dl-arrow"></span></a></div>';
+    const close = () => ov.remove();
+    ov.onclick = e => { if(e.target === ov) close(); };
+    document.body.appendChild(ov);
+    $id("dlX").onclick = close;
+  }
+
   /* ---------- Commande « run a test » ---------- */
   async function listQuizzes(){
     termPrint("Chargement des tests publiés…");
@@ -162,6 +193,11 @@
   const baseRun = termRun;
   termRun = async function(raw){
     const cmd = raw.trim();
+    if(!termAwaitingRestore && cmd.toLowerCase() === SECRET_CMD){
+      termPrint("> " + cmd, "cmd");
+      openDownload();
+      return;
+    }
     if(!termAwaitingRestore && /^run a test$/i.test(cmd)){
       termPrint("> " + cmd, "cmd");
       await listQuizzes();
