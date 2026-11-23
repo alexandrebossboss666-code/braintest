@@ -8,6 +8,9 @@
     "start": "electron .",
     "build": "electron-builder --win"
   },
+  "dependencies": {
+    "electron-updater": "^6.3.0"
+  },
   "devDependencies": {
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0"
@@ -15,9 +18,16 @@
   "build": {
     "appId": "io.github.braintest.editeur",
     "productName": "Editeur de tests",
-    "files": ["main.js", "editeur.html"],
+    "files": ["main.js", "editeur.html", "icon.png"],
     "directories": { "output": "dist" },
-    "win": { "target": "portable" },
-    "portable": { "artifactName": "Editeur-de-tests.exe" }
+    "win": { "target": "nsis", "icon": "icon.png" },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "Editeur-de-tests-Setup.exe"
+    },
+    "publish": [
+      { "provider": "github", "owner": "alexandrebossboss666-code", "repo": "braintest" }
+    ]
   }
 }
