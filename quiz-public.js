@@ -4,7 +4,7 @@
   const KEY = "braintest_public_bilans";
   // Commande secrète (non listée dans les suggestions ni dans « help ») et lien du logiciel
   const SECRET_CMD = "get the editor";
-  const EDITOR_URL = "https://github.com/alexandrebossboss666-code/braintest/releases/latest/download/Editeur-de-tests.exe";
+  const EDITOR_URL = "https://github.com/alexandrebossboss666-code/braintest/releases/latest/download/Editeur-de-tests-Setup.exe";
   const $id = id => document.getElementById(id);
   const norm = s => String(s).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   function load(){
@@ -162,7 +162,7 @@
     ov.innerHTML = '<div class="dl-box"><span class="dl-x" id="dlX">✕</span>'
       + '<div class="dl-text"><h2>Éditeur de tests</h2>'
       + '<p>Crée tes propres tests, puis publie-les sur le site : tout le monde pourra les lancer avec la commande « run a test ».</p>'
-      + '<small>Pour Windows. Si Windows affiche un avertissement, clique sur « Informations complémentaires » puis « Exécuter quand même ».</small></div>'
+      + '<small>Pour Windows, mises à jour automatiques. Si Windows affiche un avertissement, clique sur « Informations complémentaires » puis « Exécuter quand même ».</small></div>'
       + '<a class="dl-btn" href="' + EDITOR_URL + '">Télécharger<span class="dl-arrow"></span></a></div>';
     const close = () => ov.remove();
     ov.onclick = e => { if(e.target === ov) close(); };
