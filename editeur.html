@@ -51,11 +51,42 @@ button{font-family:inherit;cursor:pointer}
 
 /* Éditeur */
 #editor,#play{display:none;min-height:100vh}
-.tools{width:84px;flex-shrink:0;background:#EDEDEB;border-right:2px solid #1c1c18;padding:110px 8px 16px;text-align:center;font-size:.72rem;color:#6b6b67;line-height:1.4}
-.tools b{display:block;color:var(--ink);font-family:'Space Grotesk',sans-serif}
+.tools{width:92px;flex-shrink:0;background:#EDEDEB;border-right:2px solid #1c1c18;padding:12px 10px 14px;display:flex;flex-direction:column}
+.tbar{width:100%;aspect-ratio:1/1;background:#C9C9C7;display:flex;align-items:center;justify-content:center;text-align:center;margin-bottom:14px;font:700 .72rem/1.2 'Space Grotesk',sans-serif;color:var(--ink)}
+.tool{width:100%;aspect-ratio:1/1;border:none;border-radius:0;margin-bottom:10px;padding:0;display:flex;align-items:center;justify-content:center;font:800 1.5rem 'Space Grotesk',sans-serif;color:var(--ink);cursor:grab;touch-action:none}
+.tool.off{opacity:.4;cursor:not-allowed}
+#tMask{background:#B3B3B3}
+#tHint{background:#C7C5C5}
+#trash{margin-top:auto;width:100%;aspect-ratio:1/1;border:2px dashed #8f8f8a;position:relative}
+#trash.hot{background:#f8dcdc;border-color:var(--red)}
+.bin{position:absolute;left:50%;top:50%;width:20px;height:24px;margin:-9px 0 0 -10px;border:3px solid #6b6b67;border-top:none;border-radius:0 0 4px 4px}
+.bin::before{content:"";position:absolute;left:-7px;top:-6px;width:26px;height:3px;background:#6b6b67}
+.bin::after{content:"";position:absolute;left:3px;top:-10px;width:8px;height:4px;border:3px solid #6b6b67;border-bottom:none}
+.bulb{position:relative;display:inline-block;width:20px;height:28px}
+.bulb::before{content:"";position:absolute;left:0;top:0;width:20px;height:20px;border-radius:50%;background:#FFD43B;box-shadow:0 0 6px rgba(255,200,0,.7)}
+.bulb::after{content:"";position:absolute;left:5px;top:20px;width:10px;height:6px;background:#8f8f8a;border-radius:0 0 3px 3px}
+#tip{position:fixed;display:none;max-width:230px;background:#fff;border:2px solid #000;padding:8px 10px;color:#000;font-size:.78rem;line-height:1.4;z-index:120;pointer-events:none}
+#ghost{position:fixed;display:none;pointer-events:none;z-index:150;transform:translate(-50%,-50%)}
+.gh-mask{width:34px;height:34px;background:#FFBA6B;border:2px solid #e8a04f;border-radius:8px;font:800 1.1rem/30px 'Space Grotesk',sans-serif;text-align:center;color:var(--ink)}
+.mk{position:absolute;top:-9px;right:-9px;width:22px;height:22px;background:#FFBA6B;border:1.5px solid #e8a04f;border-radius:6px;font:800 .8rem 'Space Grotesk',sans-serif;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none}
+.hcell{position:absolute;top:0;width:46px;height:46px;border:2px dashed #d4a800;background:rgba(255,212,59,.2);display:none;align-items:center;justify-content:center}
+.hcell[data-p="l"]{left:62px}
+.hcell[data-p="r"]{right:62px}
+body.carry-hint .hcell{display:flex}
+.hcell.has{display:flex;border-style:solid}
+.hcell .bulb{cursor:grab;touch-action:none}
+.hin{position:absolute;bottom:56px;width:210px;padding:8px 10px;border:1.5px solid #d4a800;background:#fffbe0;font:600 .85rem 'Inter',sans-serif;z-index:5}
+.hin[data-p="l"]{left:62px}
+.hin[data-p="r"]{right:62px}
+.hin:focus{outline:2px solid var(--accd)}
+.ch.mys{background:#FFBA6B;border-color:#e8a04f}
+.ch.mys .l{font-weight:800}
+.hb{position:absolute;bottom:24px;width:46px;height:46px;border:2px solid #d4a800;background:#fff8d6;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.hb.l{left:94px}
+.hb.r{right:94px}
 .stage{flex:1;display:flex;flex-direction:column;align-items:center;padding:40px 20px 110px}
 .tname{font-weight:700;font-size:1.1rem;margin-bottom:14px;text-align:center}
-.card{background:var(--card);border:2px solid var(--bd);border-radius:22px;width:520px;max-width:100%;min-height:380px;padding:26px 32px 24px;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+.card{position:relative;background:var(--card);border:2px solid var(--bd);border-radius:22px;width:520px;max-width:100%;min-height:380px;padding:26px 32px 24px;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.08)}
 .prog{text-align:center;font-size:.75rem;font-weight:600;letter-spacing:.04em;color:#6b6b67;margin-bottom:12px}
 .qt{width:100%;resize:none;border:1.5px dashed transparent;background:transparent;border-radius:10px;padding:8px;text-align:center;font:600 1.05rem 'Inter',sans-serif;color:var(--ink);margin-bottom:14px}
 .qt:hover,.qt:focus{border-color:#9b9b96;background:#f3f3f1;outline:none}
@@ -146,7 +177,14 @@ button{font-family:inherit;cursor:pointer}
 </div>
 
 <div id="editor">
-  <aside class="tools"><b>Outils</b>à venir</aside>
+  <aside class="tools">
+    <div class="tbar">Barre d’outils</div>
+    <button class="tool" id="tMask" aria-label="Cache choix">?</button>
+    <button class="tool" id="tHint" aria-label="Indice"><span class="bulb"></span></button>
+    <div id="trash" aria-label="Poubelle"><span class="bin"></span></div>
+    <div id="tip"></div>
+    <div id="ghost"></div>
+  </aside>
   <main class="stage">
     <div class="tname d" id="tname"></div>
     <div class="card" id="card"></div>
@@ -172,7 +210,8 @@ let tests = load(), cur = null, qi = 0, editId = null;
 function load(){ try{ return JSON.parse(localStorage.getItem(K)) || []; }catch(e){ return []; } }
 function save(){ try{ localStorage.setItem(K, JSON.stringify(tests)); }catch(e){} }
 function newQ(type){ return { type, text:"", choices: type === "text" ? [] : [{ t:"Choix 1", ok:false }], answer:"" }; }
-function show(v){ $("#home").style.display = v === "home" ? "flex" : "none"; $("#editor").style.display = v === "ed" ? "flex" : "none"; $("#play").style.display = v === "play" ? "flex" : "none"; }
+const sig = t => JSON.stringify({ n: t.name, q: t.questions });
+function show(v){ $("#home").style.display = v === "home" ? "flex" : "none"; $("#editor").style.display = v === "ed" ? "flex" : "none"; $("#play").style.display = v === "play" ? "flex" : "none"; document.querySelector(".corner").style.display = v === "ed" ? "none" : "block"; if(v !== "ed") endCarry(); }
 
 /* ---------- Accueil ---------- */
 function renderList(){
@@ -187,6 +226,7 @@ function renderList(){
     m.dataset.id = el.dataset.id;
     const tt = tests.find(x => x.id === el.dataset.id);
     $("#tPub").textContent = tt && tt.pub ? "Mettre à jour la publication" : "Publier le test";
+    $("#tPub").disabled = !!(tt && tt.pub && tt.pub.sig === sig(tt));
     m.classList.add("show");
   });
 }
@@ -227,11 +267,16 @@ function renderPlay(){
   let b = "";
   if(q.type === "text") b = '<input id="pans" class="ans" maxlength="80" placeholder="Ta réponse" autocomplete="off"><button class="vb go" id="pval">Valider</button>';
   else {
-    b = q.choices.map((c, i) => `<div class="ch pc" data-i="${i}"><span class="l">${esc(c.t)}</span></div>`).join("");
+    b = q.choices.map((c, i) => { const m = q.type === "single" && q.mask === i; return `<div class="ch pc${m ? " mys" : ""}" data-i="${i}"><span class="l">${m ? "?" : esc(c.t)}</span></div>`; }).join("");
     if(q.type === "multi") b += '<button class="vb go" id="pval">Valider</button>';
   }
-  $("#pcard").innerHTML = `<div class="prog">Question ${pi + 1} / ${n}</div><p class="pq">${esc(q.text)}</p><div class="opts">${b}</div><p class="msg" id="pfb"></p>`;
+  const hh = q.hint && q.hint.text && q.hint.text.trim();
+  $("#pcard").innerHTML = `<div class="prog">Question ${pi + 1} / ${n}</div><p class="pq">${esc(q.text)}</p>`
+    + (hh ? `<p id="phint" style="display:none;text-align:center;color:#8a6d00;font-size:.85rem;font-weight:600;margin:-6px 8px 14px">Indice : ${esc(q.hint.text)}</p>` : "")
+    + `<div class="opts">${b}</div><p class="msg" id="pfb"></p>`
+    + (hh ? `<button class="hb ${q.hint.pos}" id="pbulb" aria-label="Voir l’indice"><span class="bulb"></span></button>` : "");
   const els = [...document.querySelectorAll(".pc")];
+  const pb = $("#pbulb"); if(pb) pb.onclick = () => { const h = $("#phint"); h.style.display = h.style.display === "none" ? "block" : "none"; };
   let done = false;
   const endQ = (good, fb) => {
     done = true; pans[pi] = good; const k = ptok;
@@ -243,6 +288,8 @@ function renderPlay(){
     els.forEach(d => d.onclick = () => {
       if(done) return;
       const c = q.choices[d.dataset.i];
+      const my = document.querySelector(".mys");
+      if(my){ my.querySelector(".l").textContent = q.choices[my.dataset.i].t; my.classList.remove("mys"); }
       els.forEach(e => { if(q.choices[e.dataset.i].ok) e.classList.add("on"); });
       if(!c.ok) d.classList.add("bad");
       endQ(c.ok, c.ok ? "Bonne réponse !" : "Pas tout à fait…");
@@ -306,7 +353,7 @@ $("#pYes").onclick = async () => {
   const key = t.pub ? t.pub.key : newKey();
   const { data, error } = await sb.rpc("publish_quiz", { p_id: t.pub ? t.pub.id : null, p_key: key, p_name: t.name, p_questions: t.questions });
   if(error){ msg.style.color = "#c0342c"; msg.textContent = "Erreur : " + (error.message || "inconnue"); $("#pYes").disabled = false; return; }
-  t.pub = { id: data, key }; save(); renderList();
+  t.pub = { id: data, key, sig: sig(t) }; save(); renderList();
   $("#pov").classList.remove("show");
 };
 
@@ -342,11 +389,14 @@ function renderEd(){
   if(q.type === "text"){
     b = `<input id="ans" class="ans" maxlength="80" placeholder="Écris ici la bonne réponse" value="${esc(q.answer)}"><button class="vb" tabindex="-1">Valider</button>`;
   } else {
-    b = q.choices.map((c, i) => `<div class="ch${c.ok ? " on" : ""}" data-i="${i}"><input maxlength="60" value="${esc(c.t)}">${q.choices.length > 1 ? '<span class="x" title="Supprimer ce choix">✕</span>' : ""}</div>`).join("");
+    b = q.choices.map((c, i) => `<div class="ch${c.ok ? " on" : ""}" data-i="${i}"><input maxlength="60" value="${esc(c.t)}">${q.choices.length > 1 ? '<span class="x" title="Supprimer ce choix">✕</span>' : ""}${q.mask === i ? '<span class="mk" data-mk>?</span>' : ""}</div>`).join("");
     if(q.choices.length < MAXC) b += '<button class="addc" id="addc">+</button>';
     if(q.type === "multi") b += '<button class="vb" tabindex="-1">Valider</button>';
     b += '<p class="hint">Clique sur le contour d’un choix pour en faire la bonne réponse (re-clique pour annuler), ou sur le texte pour le modifier. Le ✕ supprime un choix.</p>';
   }
+  const hp = q.hint ? q.hint.pos : null;
+  const cell = p => `<div class="hcell${hp === p ? " has" : ""}" data-p="${p}">${hp === p ? '<span class="bulb" data-bulb></span>' : ""}</div>`;
+  const hin = hp ? `<input class="hin" id="hin" data-p="${hp}" maxlength="100" placeholder="Écris ton indice ici" value="${esc(q.hint.text || "")}">` : "";
   $("#card").innerHTML = `
     <div class="prog">Question ${qi + 1} / ${MAXQ} · ${lbl}</div>
     <textarea id="qt" class="qt" rows="2" maxlength="200" placeholder="Écris ta question ici">${esc(q.text)}</textarea>
@@ -359,16 +409,22 @@ function renderEd(){
         <button data-t="multi">Question à choix multiples</button>
         <button data-t="text">Question avec champ de texte</button>
       </div>
+      ${cell("l")}${cell("r")}${hin}
     </div>`;
 
   $("#qt").oninput = e => { q.text = e.target.value; };
+  const hi = $("#hin");
+  if(hi){ hi.oninput = e => { q.hint.text = e.target.value; }; if(focusHint){ hi.focus(); focusHint = false; } }
+  const mkEl = document.querySelector("[data-mk]"); if(mkEl) mkEl.onpointerdown = e => pickExisting(e, "mask");
+  const buEl = document.querySelector("[data-bulb]"); if(buEl) buEl.onpointerdown = e => pickExisting(e, "hint");
+  $("#tMask").classList.toggle("off", q.type !== "single");
   const a = $("#ans"); if(a) a.oninput = e => { q.answer = e.target.value; };
   document.querySelectorAll(".ch").forEach(d => {
     const c = q.choices[d.dataset.i];
     d.querySelector("input").oninput = e => { c.t = e.target.value; };
     d.onclick = e => {
       if(e.target.tagName === "INPUT") return;
-      if(e.target.classList.contains("x")){ q.choices.splice(+d.dataset.i, 1); let k = 0; const mx = Math.max(1, q.choices.length - 1); q.choices.forEach(x => { if(x.ok && ++k > mx) x.ok = false; }); renderEd(); return; }
+      if(e.target.classList.contains("x")){ const di = +d.dataset.i; q.choices.splice(di, 1); if(q.mask === di) delete q.mask; else if(q.mask > di) q.mask--; let k = 0; const mx = Math.max(1, q.choices.length - 1); q.choices.forEach(x => { if(x.ok && ++k > mx) x.ok = false; }); renderEd(); return; }
       if(q.type === "single"){ const was = c.ok; q.choices.forEach(x => x.ok = false); c.ok = !was; }
       else {
         const mx = Math.max(1, q.choices.length - 1);
@@ -394,6 +450,74 @@ function renderEd(){
   });
 }
 
+/* ---------- Outils : cache ? et indice ---------- */
+let carry = null, moved = false, justPicked = false, suppress = false, focusHint = false, sx = 0, sy = 0;
+const ghost = $("#ghost"), tip = $("#tip");
+const TIPS = {
+  tMask: "Ceci est un cache choix, il permet de cacher un choix dans une question à choix unique pour rendre la question plus difficile.",
+  tHint: "Ceci est un indice, il permet d’ajouter un indice à la question, quel que soit son type."
+};
+["tMask", "tHint"].forEach(id => {
+  const b = $("#" + id);
+  b.onmouseenter = () => { const r = b.getBoundingClientRect(); tip.textContent = TIPS[id]; tip.style.left = (r.right + 8) + "px"; tip.style.top = r.top + "px"; tip.style.display = "block"; };
+  b.onmouseleave = () => { tip.style.display = "none"; };
+  b.onpointerdown = e => { if(!b.classList.contains("off")) startCarry(e, id === "tMask" ? "mask" : "hint", null); };
+});
+function moveGhost(e){ ghost.style.left = e.clientX + "px"; ghost.style.top = e.clientY + "px"; }
+function block(){ suppress = true; setTimeout(() => { suppress = false; }, 0); }
+function startCarry(e, kind, orig){
+  carry = { kind, orig, text: orig && orig.text ? orig.text : "" };
+  ghost.className = "gh-" + kind;
+  ghost.innerHTML = kind === "mask" ? "?" : '<span class="bulb"></span>';
+  ghost.style.display = "block";
+  document.body.classList.toggle("carry-hint", kind === "hint");
+  if(orig) $("#trash").classList.add("hot");
+  moveGhost(e); sx = e.clientX; sy = e.clientY; moved = false; justPicked = true;
+  tip.style.display = "none"; e.preventDefault();
+}
+function pickExisting(e, kind){
+  const q = cur.questions[qi];
+  const orig = kind === "mask" ? { i: q.mask } : { pos: q.hint.pos, text: q.hint.text };
+  if(kind === "mask") delete q.mask; else delete q.hint;
+  renderEd();
+  startCarry(e, kind, orig);
+}
+function endCarry(){
+  carry = null; ghost.style.display = "none";
+  document.body.classList.remove("carry-hint"); $("#trash").classList.remove("hot");
+}
+function restoreOrig(c, q){
+  if(!c.orig) return;
+  if(c.kind === "mask") q.mask = c.orig.i; else q.hint = { pos: c.orig.pos, text: c.orig.text };
+}
+function dropCarry(e){
+  const c = carry, q = cur.questions[qi];
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const ch = el && el.closest(".ch"), cl = el && el.closest(".hcell"), tr = el && el.closest("#trash");
+  endCarry(); block();
+  if(c.kind === "mask" && ch && q.type === "single") q.mask = +ch.dataset.i;
+  else if(c.kind === "hint" && cl){ q.hint = { pos: cl.dataset.p, text: c.text || (q.hint && q.hint.text) || "" }; focusHint = true; }
+  else if(!tr) restoreOrig(c, q);
+  renderEd();
+}
+document.addEventListener("pointermove", e => {
+  if(!carry) return;
+  moveGhost(e);
+  if(Math.hypot(e.clientX - sx, e.clientY - sy) > 6) moved = true;
+});
+document.addEventListener("pointerdown", e => { if(carry && !justPicked) e.preventDefault(); }, true);
+document.addEventListener("pointerup", e => {
+  if(!carry) return;
+  if(justPicked){ justPicked = false; if(!moved){ block(); return; } }
+  dropCarry(e);
+});
+document.addEventListener("click", e => { if(suppress){ e.stopPropagation(); e.preventDefault(); } }, true);
+document.addEventListener("keydown", e => {
+  if(e.key !== "Escape" || !carry) return;
+  const c = carry, q = cur.questions[qi];
+  endCarry(); restoreOrig(c, q); renderEd();
+});
+
 $("#finBtn").onclick = () => {
   for(let i = 0; i < cur.questions.length; i++){
     const q = cur.questions[i]; let p = "";
@@ -411,3 +535,4 @@ renderList();
 </script>
 </body>
 </html>
+
