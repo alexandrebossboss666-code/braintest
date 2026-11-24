@@ -33,7 +33,13 @@
 .dl-btn:hover{background:var(--accent-dark)}
 .dl-arrow{position:relative;display:inline-block;width:16px;height:18px;margin-left:10px}
 .dl-arrow::before{content:"";position:absolute;left:6px;top:0;width:3px;height:14px;background:currentColor}
-.dl-arrow::after{content:"";position:absolute;left:3px;top:4px;width:10px;height:10px;border:solid currentColor;border-width:0 3px 3px 0;transform:rotate(45deg)}`;
+.dl-arrow::after{content:"";position:absolute;left:3px;top:4px;width:10px;height:10px;border:solid currentColor;border-width:0 3px 3px 0;transform:rotate(45deg)}
+.qp-hb{position:absolute;bottom:20px;width:44px;height:44px;border:2px solid #d4a800;background:#fff8d6;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.qp-hb.l{left:30px}
+.qp-hb.r{right:30px}
+.qp-bulb{position:relative;display:inline-block;width:18px;height:26px}
+.qp-bulb::before{content:"";position:absolute;left:0;top:0;width:18px;height:18px;border-radius:50%;background:#FFD43B;box-shadow:0 0 6px rgba(255,200,0,.7)}
+.qp-bulb::after{content:"";position:absolute;left:4px;top:18px;width:10px;height:6px;background:#8f8f8a;border-radius:0 0 3px 3px}`;
   document.head.appendChild(st);
 
   /* ---------- Bilans « Quiz public » dans la colonne Bilan ---------- */
@@ -77,13 +83,18 @@
     if(q.type === "text"){
       body = '<div class="field" style="width:78%;margin:0 auto"><input type="text" id="qpIn" maxlength="80" autocomplete="off" placeholder="Ta réponse"></div><button class="qp-val" id="qpVal">Valider</button>';
     } else {
-      body = '<div class="options">' + q.choices.map((c, k) => '<button class="opt-btn" data-k="' + k + '">' + escapeHtml(c.t) + '</button>').join("") + '</div>'
+      body = '<div class="options">' + q.choices.map((c, k) => { const m = q.type === "single" && q.mask === k; return '<button class="opt-btn' + (m ? ' mystery-card' : '') + '" data-k="' + k + '">' + (m ? "?" : escapeHtml(c.t)) + '</button>'; }).join("") + '</div>'
         + (q.type === "multi" ? '<button class="qp-val" id="qpVal">Valider</button>' : "");
     }
+    const hh = q.hint && typeof q.hint.text === "string" && q.hint.text.trim();
+    const hintP = hh ? '<p id="qpHint" style="display:none;text-align:center;color:#8a6d00;font-size:.85rem;font-weight:600;margin:-8px 6px 14px">Indice : ' + escapeHtml(q.hint.text) + '</p>' : "";
+    const hintBtn = hh ? '<button class="qp-hb ' + (q.hint.pos === "r" ? "r" : "l") + '" id="qpBulb" aria-label="Voir l’indice"><span class="qp-bulb"></span></button>' : "";
     card.innerHTML = '<div class="quiz-progress">' + escapeHtml(cur.name) + ' · Question ' + (i + 1) + ' / ' + n + '</div>'
-      + '<p class="question-text">' + escapeHtml(q.text) + '</p>' + body
-      + '<p class="feedback-flash" id="qpFb"></p><p class="qp-quit" id="qpQuit">Quitter le test</p>';
+      + '<p class="question-text">' + escapeHtml(q.text) + '</p>' + hintP + body
+      + '<p class="feedback-flash" id="qpFb"></p><p class="qp-quit" id="qpQuit">Quitter le test</p>' + hintBtn;
     $id("qpQuit").onclick = () => { qz = null; renderRegistration(); };
+    const bb = $id("qpBulb");
+    if(bb) bb.onclick = () => { const h = $id("qpHint"); h.style.display = h.style.display === "none" ? "block" : "none"; };
 
     const btns = [...card.querySelectorAll(".opt-btn")];
     const goods = q.type === "text" ? q.answer : q.choices.filter(c => c.ok).map(c => c.t).join(", ");
@@ -91,17 +102,23 @@
     const next = (ok, given, fb) => {
       done = true;
       cur.rec.push({ q: q.text, ok, given, correct: goods });
-      const f = $id("qpFb"); f.style.color = ok ? "#4a7a3a" : "#c0342c"; f.textContent = fb;
+      const f = $id("qpFb"); if(f){ f.style.color = ok ? "#4a7a3a" : "#c0342c"; f.textContent = fb; }
       setTimeout(() => { if(qz !== cur) return; i + 1 < n ? playQ(i + 1) : endQuiz(); }, 1100);
     };
 
     if(q.type === "single"){
       btns.forEach(btn => btn.onclick = () => {
         if(done) return;
+        done = true;
         const c = q.choices[btn.dataset.k], ok = !!c.ok;
-        btns.forEach(x => { x.classList.add("disabled"); if(q.choices[x.dataset.k].ok) x.classList.add("correct"); });
-        if(!ok) btn.classList.add("wrong");
-        next(ok, c.t, ok ? "Bonne réponse !" : "Pas tout à fait…");
+        btns.forEach(x => x.classList.add("disabled"));
+        const my = card.querySelector(".mystery-card");
+        const reveal = my ? flipButton(my, () => { my.textContent = q.choices[my.dataset.k].t; my.classList.remove("mystery-card"); }, 300) : Promise.resolve();
+        reveal.then(() => {
+          btns.forEach(x => { if(q.choices[x.dataset.k].ok) x.classList.add("correct"); });
+          if(!ok) btn.classList.add("wrong");
+          next(ok, c.t, ok ? "Bonne réponse !" : "Pas tout à fait…");
+        });
       });
     } else if(q.type === "multi"){
       btns.forEach(btn => btn.onclick = () => { if(!done) btn.classList.toggle("qp-sel"); });
