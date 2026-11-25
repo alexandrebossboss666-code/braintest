@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connexion</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#fff;font-family:'Inter',sans-serif;color:#26261f}
+.corner{position:fixed;top:0;left:0;width:0;height:0;border-top:70px solid #c0342c;border-right:70px solid transparent}
+.card{width:calc(100% - 40px);max-width:380px;background:#E7E7E5;border:2px solid #5c5c58;border-radius:22px;padding:26px 28px;box-shadow:0 10px 30px rgba(0,0,0,.08);visibility:hidden}
+h1{font:700 1.35rem 'Space Grotesk',sans-serif;text-align:center;margin:0 0 18px}
+.tabs{display:flex;margin-bottom:18px;border:1.5px solid #8f8f8a;border-radius:12px;overflow:hidden}
+.tabs button{flex:1;border:none;background:#c7c7c4;padding:10px;font:600 .85rem 'Space Grotesk',sans-serif;color:#26261f;cursor:pointer}
+.tabs button.on{background:#c0342c;color:#fff}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.82rem;font-weight:600;margin-bottom:6px}
+.field input{width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid #9b9b96;background:#fbfbfa;font:inherit}
+.field input:focus{outline:2px solid #e8a04f;outline-offset:1px}
+.go{width:100%;margin-top:4px;border:none;border-radius:14px;padding:12px;background:#FFBA6B;color:#3a2408;font:600 .95rem 'Space Grotesk',sans-serif;cursor:pointer}
+.go:hover{background:#e8a04f}
+.go:disabled{opacity:.6;cursor:wait}
+.msg{text-align:center;font-size:.8rem;font-weight:600;line-height:1.4;margin:12px 0 0;min-height:1.2em}
+</style>
+</head>
+<body>
+<div class="corner"></div>
+<main class="card" id="box">
+  <h1>Éditeur de tests</h1>
+  <div class="tabs"><button id="tabIn" class="on">Connexion</button><button id="tabUp">Créer un compte</button></div>
+  <div class="field"><label for="em">Email</label><input type="email" id="em" autocomplete="username"></div>
+  <div class="field"><label for="pw">Mot de passe</label><input type="password" id="pw" autocomplete="current-password"></div>
+  <div class="field" id="pw2f" style="display:none"><label for="pw2">Confirme le mot de passe</label><input type="password" id="pw2" autocomplete="new-password"></div>
+  <button class="go" id="go">Se connecter</button>
+  <p class="msg" id="msg"></p>
+</main>
+<script>
+const SB_URL = "https://alrcdwhyrgqqrfyxqklg.supabase.co", SB_KEY = "sb_publishable_AXSZBIjcBZbAVosgFccfYQ_dUVhaXa0";
+const sb = window.supabase.createClient(SB_URL, SB_KEY, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:false } });
+const $ = id => document.getElementById(id);
+let mode = "in";
+
+function say(t, ok){ const m = $("msg"); m.textContent = t; m.style.color = ok ? "#3f7a2b" : "#c0342c"; }
+function setMode(m){
+  mode = m;
+  $("tabIn").classList.toggle("on", m === "in"); $("tabUp").classList.toggle("on", m === "up");
+  $("pw2f").style.display = m === "up" ? "block" : "none";
+  $("go").textContent = m === "in" ? "Se connecter" : "Créer mon compte";
+  $("pw").autocomplete = m === "in" ? "current-password" : "new-password";
+  $("msg").textContent = "";
+}
+function fr(e){
+  const m = String((e && e.message) || e).toLowerCase();
+  if(m.includes("invalid login")) return "Email ou mot de passe incorrect.";
+  if(m.includes("not confirmed")) return "Confirme d’abord ton email grâce au lien reçu par email.";
+  if(m.includes("rate limit") || m.includes("too many")) return "Trop de tentatives, réessaie dans quelques minutes.";
+  if(m.includes("password")) return "Mot de passe refusé (8 caractères minimum).";
+  if(m.includes("fetch") || m.includes("network")) return "Connexion impossible : vérifie ta connexion internet.";
+  return "Erreur : " + ((e && e.message) || e);
+}
+async function submit(){
+  const email = $("em").value.trim(), pw = $("pw").value;
+  if(!email || !pw){ say("Renseigne ton email et ton mot de passe."); return; }
+  if(mode === "up"){
+    if(pw.length < 8){ say("Le mot de passe doit faire au moins 8 caractères."); return; }
+    if(pw !== $("pw2").value){ say("Les deux mots de passe ne correspondent pas."); return; }
+  }
+  $("go").disabled = true; say("Un instant…", true);
+  try{
+    if(mode === "in"){
+      const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+      if(error){ say(fr(error)); return; }
+      if(window.api) window.api.loggedIn();
+    } else {
+      const { data, error } = await sb.auth.signUp({ email, password: pw });
+      if(error){ say(fr(error)); return; }
+      if(data.user && data.user.identities && data.user.identities.length === 0){ say("Un compte existe déjà avec cet email."); return; }
+      if(data.session){ if(window.api) window.api.loggedIn(); return; }
+      setMode("in");
+      say("Compte créé ! Clique sur le lien reçu par email, puis reviens te connecter ici.", true);
+    }
+  } catch(e){ say(fr(e)); }
+  finally{ $("go").disabled = false; }
+}
+$("tabIn").onclick = () => setMode("in");
+$("tabUp").onclick = () => setMode("up");
+$("go").onclick = submit;
+["em", "pw", "pw2"].forEach(id => $(id).onkeydown = e => { if(e.key === "Enter") submit(); });
+
+// Session déjà ouverte : on entre directement, sans afficher cette fenêtre
+(async () => {
+  try{
+    const { data } = await sb.auth.getSession();
+    if(data.session && window.api){ window.api.loggedIn(); return; }
+  } catch(e){}
+  $("box").style.visibility = "visible";
+  if(window.api) window.api.showLogin();
+})();
+</script>
+</body>
+</html>
