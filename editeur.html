@@ -59,9 +59,9 @@ button{font-family:inherit;cursor:pointer}
 #tHint{background:#C7C5C5}
 #trash{margin-top:auto;width:100%;aspect-ratio:1/1;border:2px dashed #8f8f8a;position:relative}
 #trash.hot{background:#f8dcdc;border-color:var(--red)}
-.bin{position:absolute;left:50%;top:50%;width:20px;height:24px;margin:-9px 0 0 -10px;border:3px solid #6b6b67;border-top:none;border-radius:0 0 4px 4px}
-.bin::before{content:"";position:absolute;left:-7px;top:-6px;width:26px;height:3px;background:#6b6b67}
-.bin::after{content:"";position:absolute;left:3px;top:-10px;width:8px;height:4px;border:3px solid #6b6b67;border-bottom:none}
+.bin{position:absolute;left:50%;top:50%;width:20px;height:24px;margin:-6px 0 0 -10px;border:3px solid #6b6b67;border-top:none;border-radius:0 0 4px 4px}
+.bin::before{content:"";position:absolute;left:-7px;top:-6px;width:28px;height:3px;background:#6b6b67}
+.bin::after{content:"";position:absolute;left:2px;top:-12px;width:4px;height:3px;border:3px solid #6b6b67;border-bottom:none}
 .bulb{position:relative;display:inline-block;width:20px;height:28px}
 .bulb::before{content:"";position:absolute;left:0;top:0;width:20px;height:20px;border-radius:50%;background:#FFD43B;box-shadow:0 0 6px rgba(255,200,0,.7)}
 .bulb::after{content:"";position:absolute;left:5px;top:20px;width:10px;height:6px;background:#8f8f8a;border-radius:0 0 3px 3px}
@@ -114,17 +114,29 @@ body.carry-hint .hcell{display:flex}
 .ans:focus{outline:2px solid var(--accd);outline-offset:1px}
 .vb{display:block;margin:6px auto 0;border:none;border-radius:14px;padding:11px 24px;background:var(--acc);color:#3a2408;font:600 .92rem 'Space Grotesk',sans-serif;opacity:.75;cursor:default}
 .hint{margin:10px 8px 0;text-align:center;font-size:.72rem;color:#6b6b67;line-height:1.4}
-.foot{display:flex;justify-content:space-between;margin-top:18px;position:relative}
-.sq{position:relative;width:46px;height:46px;border:2px solid #8f8f8a;background:var(--gray);border-radius:8px;padding:0}
-.sq:hover:not(:disabled){background:#b7b7b3}
-.sq:disabled{opacity:.4;cursor:not-allowed}
-.sq.l::before,.sq.r::before{content:"";position:absolute;top:14px;width:14px;height:14px;border:solid var(--ink);border-width:0 0 4px 4px;transform:rotate(45deg)}
-.sq.l::before{left:16px}
-.sq.r::before{left:10px;border-width:4px 4px 0 0}
-.sq.p::before,.sq.p::after{content:"";position:absolute;background:var(--ink);border-radius:2px}
-.sq.p::before{left:10px;top:19px;width:22px;height:4px}
-.sq.p::after{left:19px;top:10px;width:4px;height:22px}
-.qmenu{position:absolute;right:0;bottom:56px;width:250px;background:#fff;border:2px solid #1c1c18;border-radius:12px;overflow:hidden;display:none;z-index:10}
+.foot{display:flex;justify-content:space-between;margin-top:18px;position:relative;min-height:46px}
+.nav{position:relative;width:48px;height:46px;padding:0;border:1px solid #bdbdb9;background:linear-gradient(180deg,#fff 0%,#f4f4f2 50%,#dddddb 100%);box-shadow:0 3px 0 #b3b3af,0 6px 10px rgba(0,0,0,.28),inset 0 1px 0 #fff;cursor:pointer;transition:transform .08s,box-shadow .08s}
+.nav:hover:not(:disabled){background:linear-gradient(180deg,#fff 0%,#faf9f7 50%,#e6e5e2 100%)}
+.nav:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 #b3b3af,0 2px 5px rgba(0,0,0,.28),inset 0 1px 0 #fff}
+.nav:disabled{opacity:.45;cursor:not-allowed;box-shadow:0 2px 0 #b3b3af}
+.nav.l{border-radius:12px 0 0 12px}
+.nav.r,.nav.p{border-radius:0 12px 12px 0;margin-left:-1px}
+.nav.del{border-radius:12px}
+.ngrp{position:absolute;left:50%;top:0;transform:translateX(-50%);display:flex}
+.nav.l::before,.nav.r::before{content:"";position:absolute;top:15px;width:14px;height:14px;border:solid #8f1d17;border-width:0 0 4px 4px;transform:rotate(45deg);filter:drop-shadow(0 2px 1px rgba(0,0,0,.35))}
+.nav.l::before{left:18px}
+.nav.r::before{left:14px;border-width:4px 4px 0 0}
+.nav.p::before,.nav.p::after{content:"";position:absolute;background:linear-gradient(180deg,#b3261e,#7a1510);border-radius:2px;box-shadow:0 2px 2px rgba(0,0,0,.35)}
+.nav.p::before{left:12px;top:20px;width:22px;height:4px}
+.nav.p::after{left:21px;top:11px;width:4px;height:22px}
+.nav .bin{border-color:#8f1d17;filter:drop-shadow(0 2px 1px rgba(0,0,0,.35))}
+.nav .bin::before{background:#8f1d17}
+.nav .bin::after{border-color:#8f1d17}
+.finrow{position:fixed;right:24px;bottom:24px;display:flex;gap:12px;z-index:6}
+.finrow .fin{position:static}
+.fin.ann{background:var(--gray);color:var(--ink)}
+.fin.ann:hover{background:#b7b7b3}
+.qmenu{position:absolute;left:50%;transform:translateX(-50%);bottom:56px;width:250px;background:#fff;border:2px solid #1c1c18;border-radius:12px;overflow:hidden;display:none;z-index:10}
 .qmenu.show{display:block}
 .msg{min-height:1.2em;margin:14px 0 0;font-size:.85rem;font-weight:600;color:var(--red);text-align:center}
 .fin{position:fixed;right:24px;bottom:24px;border:none;border-radius:14px;padding:13px 22px;background:var(--acc);color:#3a2408;font:600 .95rem 'Space Grotesk',sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:6}
@@ -150,6 +162,16 @@ body.carry-hint .hcell{display:flex}
     <label for="nameIn">Nom du test</label>
     <input id="nameIn" maxlength="40" autocomplete="off">
     <button class="create" id="createBtn">Créer</button>
+  </div>
+</div>
+
+<div class="ov" id="aov">
+  <div class="box">
+    <p id="amsg" style="margin:0;font-weight:600;line-height:1.4"></p>
+    <div style="display:flex;gap:10px">
+      <button class="create" id="aNo" style="width:auto;flex:1;background:var(--gray);color:var(--ink)"></button>
+      <button class="create" id="aYes" style="width:auto;flex:1"></button>
+    </div>
   </div>
 </div>
 
@@ -190,7 +212,7 @@ body.carry-hint .hcell{display:flex}
     <div class="card" id="card"></div>
     <p class="msg" id="msg"></p>
   </main>
-  <button class="fin" id="finBtn">Terminer la création du test</button>
+  <div class="finrow"><button class="fin ann" id="annBtn">Annuler tout changement</button><button class="fin" id="finBtn">Terminer la création du test</button></div>
 </div>
 
 <div id="play">
@@ -402,8 +424,11 @@ function renderEd(){
     <textarea id="qt" class="qt" rows="2" maxlength="200" placeholder="Écris ta question ici">${esc(q.text)}</textarea>
     <div class="opts">${b}</div>
     <div class="foot">
-      <button class="sq l" id="prev" aria-label="Question précédente" ${qi === 0 ? "disabled" : ""}></button>
-      <button class="sq ${last ? "p" : "r"}" id="nxt" aria-label="${last ? "Ajouter une question" : "Question suivante"}" ${last && n >= MAXQ ? "disabled" : ""}></button>
+      <button class="nav del" id="qdel" aria-label="Supprimer cette question" ${n < 2 ? "disabled" : ""}><span class="bin"></span></button>
+      <div class="ngrp">
+        <button class="nav l" id="prev" aria-label="Question précédente" ${qi === 0 ? "disabled" : ""}></button>
+        <button class="nav ${last ? "p" : "r"}" id="nxt" aria-label="${last ? "Ajouter une question" : "Question suivante"}" ${last && n >= MAXQ ? "disabled" : ""}></button>
+      </div>
       <div class="qmenu" id="qmenu">
         <button data-t="single">Question à choix unique</button>
         <button data-t="multi">Question à choix multiples</button>
@@ -441,6 +466,12 @@ function renderEd(){
   const ac = $("#addc");
   if(ac) ac.onclick = () => { q.choices.push({ t:"Choix " + (q.choices.length + 1), ok:false }); renderEd(); };
   $("#prev").onclick = () => { qi--; renderEd(); };
+  $("#qdel").onclick = () => {
+    if(cur.questions.length < 2) return;
+    ask("Supprimer cette question ?", "Annuler", "Supprimer", () => {
+      cur.questions.splice(qi, 1); qi = Math.min(qi, cur.questions.length - 1); renderEd();
+    });
+  };
   $("#nxt").onclick = e => {
     e.stopPropagation();
     if(!last){ qi++; renderEd(); } else $("#qmenu").classList.toggle("show");
@@ -518,6 +549,22 @@ document.addEventListener("keydown", e => {
   endCarry(); restoreOrig(c, q); renderEd();
 });
 
+/* ---------- Confirmation et annulation ---------- */
+let aCb = null;
+function ask(msg, noLbl, yesLbl, cb){
+  $("#amsg").textContent = msg; $("#aNo").textContent = noLbl; $("#aYes").textContent = yesLbl;
+  aCb = cb; $("#aov").classList.add("show");
+}
+$("#aNo").onclick = () => $("#aov").classList.remove("show");
+$("#aov").onclick = e => { if(e.target === $("#aov")) $("#aov").classList.remove("show"); };
+$("#aYes").onclick = () => { $("#aov").classList.remove("show"); const f = aCb; aCb = null; if(f) f(); };
+$("#annBtn").onclick = () => {
+  const orig = editId ? tests.find(x => x.id === editId) : null;
+  const leave = () => { cur = null; editId = null; show("home"); };
+  if(orig && sig(orig) === sig(cur)) leave();
+  else ask(editId ? "Annuler toutes les modifications de ce test ?" : "Quitter sans enregistrer ce test ?", "Continuer l’édition", "Annuler les modifications", leave);
+};
+
 $("#finBtn").onclick = () => {
   for(let i = 0; i < cur.questions.length; i++){
     const q = cur.questions[i]; let p = "";
@@ -535,4 +582,3 @@ renderList();
 </script>
 </body>
 </html>
-
