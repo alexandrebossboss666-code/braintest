@@ -26,6 +26,8 @@ button{font-family:inherit;cursor:pointer}
 .t{position:relative;background-color:#4a4a47;background-image:linear-gradient(rgba(210,210,206,.25) 1px,transparent 1px),linear-gradient(90deg,rgba(210,210,206,.25) 1px,transparent 1px);background-size:14px 14px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5);border:2px solid #2c2c2a;border-radius:0;clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,0 100%);padding:18px 10px;margin-bottom:10px;text-align:center;font:600 .95rem 'Space Grotesk',sans-serif;cursor:pointer;word-break:break-word}
 .t:hover{background-color:#5c5c58}
 .empty{margin:14px 6px;text-align:center;font-size:.8rem;color:#8a8a85}
+#userBar{position:fixed;top:14px;right:20px;display:none;align-items:center;gap:10px;font-size:.78rem;color:#6b6b67;z-index:6}
+#userBar button{border:none;background:none;padding:0;color:#0b6bd3;font:600 .78rem 'Inter',sans-serif;text-decoration:underline;cursor:pointer}
 .pub{position:absolute;top:6px;right:24px;width:14px;height:16px;filter:drop-shadow(2px 2px 0 #2f5fa3)}
 .pub::before{content:"";position:absolute;left:0;top:0;border:7px solid transparent;border-top:0;border-bottom:8px solid #FFD43B}
 .pub::after{content:"";position:absolute;left:4px;top:8px;width:6px;height:8px;background:#FFD43B}
@@ -146,6 +148,7 @@ body.carry-hint .hcell{display:flex}
 </head>
 <body>
 <div class="corner"></div>
+<div id="userBar"><span id="userMail"></span><button id="logoutBtn">Se déconnecter</button></div>
 
 <div id="home">
   <div class="grid"></div>
@@ -233,7 +236,7 @@ function load(){ try{ return JSON.parse(localStorage.getItem(K)) || []; }catch(e
 function save(){ try{ localStorage.setItem(K, JSON.stringify(tests)); }catch(e){} }
 function newQ(type){ return { type, text:"", choices: type === "text" ? [] : [{ t:"Choix 1", ok:false }], answer:"" }; }
 const sig = t => JSON.stringify({ n: t.name, q: t.questions });
-function show(v){ $("#home").style.display = v === "home" ? "flex" : "none"; $("#editor").style.display = v === "ed" ? "flex" : "none"; $("#play").style.display = v === "play" ? "flex" : "none"; document.querySelector(".corner").style.display = v === "ed" ? "none" : "block"; if(v !== "ed") endCarry(); }
+function show(v){ $("#home").style.display = v === "home" ? "flex" : "none"; $("#editor").style.display = v === "ed" ? "flex" : "none"; $("#play").style.display = v === "play" ? "flex" : "none"; document.querySelector(".corner").style.display = v === "ed" ? "none" : "block"; if(v !== "ed") endCarry(); const ub = $("#userBar"); if(ub) ub.style.display = v === "home" && window.api ? "flex" : "none"; }
 
 /* ---------- Accueil ---------- */
 function renderList(){
@@ -356,7 +359,7 @@ function endPlay(){
 /* ---------- Publication (Supabase) ---------- */
 const SB_URL = "https://alrcdwhyrgqqrfyxqklg.supabase.co", SB_KEY = "sb_publishable_AXSZBIjcBZbAVosgFccfYQ_dUVhaXa0";
 let sb = null, pubId = null;
-try{ sb = window.supabase.createClient(SB_URL, SB_KEY, { auth:{ persistSession:false, autoRefreshToken:false, detectSessionInUrl:false } }); }catch(e){}
+try{ sb = window.supabase.createClient(SB_URL, SB_KEY, { auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:false } }); }catch(e){}
 const newKey = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
 $("#tPub").onclick = () => {
   const t = tests.find(x => x.id === $("#tmenu").dataset.id);
@@ -372,7 +375,7 @@ $("#pYes").onclick = async () => {
   if(!t) return;
   if(!sb){ msg.style.color = "#c0342c"; msg.textContent = "Connexion impossible : vérifie ta connexion internet."; return; }
   $("#pYes").disabled = true; msg.style.color = "#26261f"; msg.textContent = "Publication…";
-  const key = t.pub ? t.pub.key : newKey();
+  const key = (t.pub && t.pub.key) || null;
   const { data, error } = await sb.rpc("publish_quiz", { p_id: t.pub ? t.pub.id : null, p_key: key, p_name: t.name, p_questions: t.questions });
   if(error){ msg.style.color = "#c0342c"; msg.textContent = "Erreur : " + (error.message || "inconnue"); $("#pYes").disabled = false; return; }
   t.pub = { id: data, key, sig: sig(t) }; save(); renderList();
@@ -393,7 +396,7 @@ $("#cYes").onclick = async () => {
   const t = tests.find(x => x.id === delId);
   if(t && t.pub){
     if(!sb){ $("#cmsg").textContent = "Connexion impossible : le test publié ne peut pas être retiré."; return; }
-    const { error } = await sb.rpc("unpublish_quiz", { p_id: t.pub.id, p_key: t.pub.key });
+    const { error } = await sb.rpc("unpublish_quiz", { p_id: t.pub.id, p_key: t.pub.key || null });
     if(error){ $("#cmsg").textContent = "Impossible de dépublier : " + (error.message || "erreur inconnue"); return; }
   }
   tests = tests.filter(x => x.id !== delId);
@@ -579,6 +582,21 @@ $("#finBtn").onclick = () => {
 };
 
 renderList();
+
+/* ---------- Compte : le logiciel n'est accessible qu'une fois connecté ---------- */
+(async () => {
+  if(!window.api || !sb) return;
+  try{
+    const { data } = await sb.auth.getSession();
+    if(!data.session){ window.api.logout(); return; }
+    $("#userMail").textContent = data.session.user.email || "";
+    $("#userBar").style.display = "flex";
+  } catch(e){ window.api.logout(); }
+})();
+$("#logoutBtn").onclick = async () => {
+  try{ await sb.auth.signOut({ scope: "local" }); }catch(e){}
+  if(window.api) window.api.logout();
+};
 </script>
 </body>
 </html>
