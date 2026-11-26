@@ -230,10 +230,37 @@ body.carry-hint .hcell{display:flex}
 const K = "braintest_editor_tests", MAXQ = 10, MAXC = 4;
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let tests = load(), cur = null, qi = 0, editId = null;
+let tests = [], cur = null, qi = 0, editId = null, currentUserId = null;
 
-function load(){ try{ return JSON.parse(localStorage.getItem(K)) || []; }catch(e){ return []; } }
-function save(){ try{ localStorage.setItem(K, JSON.stringify(tests)); }catch(e){} }
+async function loadUserTests(){
+  if(!sb || !currentUserId) throw new Error("Aucun compte connecté.");
+  const { data, error } = await sb.from("braintest_drafts")
+    .select("local_id,name,questions,pub")
+    .eq("user_id", currentUserId)
+    .order("updated_at", { ascending:false });
+  if(error) throw error;
+  tests = (data || []).map(row => ({
+    id: row.local_id, name: row.name, questions: row.questions,
+    ...(row.pub ? { pub: row.pub } : {})
+  }));
+  renderList();
+}
+
+async function save(t){
+  if(!sb || !currentUserId) throw new Error("Aucun compte connecté.");
+  const { error } = await sb.from("braintest_drafts").upsert({
+    user_id: currentUserId, local_id: t.id, name: t.name,
+    questions: t.questions, pub: t.pub || null, updated_at: new Date().toISOString()
+  }, { onConflict:"user_id,local_id" });
+  if(error) throw error;
+}
+
+async function deleteDraft(id){
+  if(!sb || !currentUserId) throw new Error("Aucun compte connecté.");
+  const { error } = await sb.from("braintest_drafts")
+    .delete().eq("user_id", currentUserId).eq("local_id", id);
+  if(error) throw error;
+}
 function newQ(type){ return { type, text:"", choices: type === "text" ? [] : [{ t:"Choix 1", ok:false }], answer:"" }; }
 const sig = t => JSON.stringify({ n: t.name, q: t.questions });
 function show(v){ $("#home").style.display = v === "home" ? "flex" : "none"; $("#editor").style.display = v === "ed" ? "flex" : "none"; $("#play").style.display = v === "play" ? "flex" : "none"; document.querySelector(".corner").style.display = v === "ed" ? "none" : "block"; if(v !== "ed") endCarry(); const ub = $("#userBar"); if(ub) ub.style.display = v === "home" && window.api ? "flex" : "none"; }
@@ -378,7 +405,7 @@ $("#pYes").onclick = async () => {
   const key = (t.pub && t.pub.key) || null;
   const { data, error } = await sb.rpc("publish_quiz", { p_id: t.pub ? t.pub.id : null, p_key: key, p_name: t.name, p_questions: t.questions });
   if(error){ msg.style.color = "#c0342c"; msg.textContent = "Erreur : " + (error.message || "inconnue"); $("#pYes").disabled = false; return; }
-  t.pub = { id: data, key, sig: sig(t) }; save(); renderList();
+  t.pub = { id: data, key, sig: sig(t) }; try{ await save(t); }catch(e){ msg.style.color = "#c0342c"; msg.textContent = "Test publié, mais sauvegarde du brouillon impossible : " + (e.message || "erreur"); $("#pYes").disabled = false; return; } renderList();
   $("#pov").classList.remove("show");
 };
 
@@ -400,7 +427,8 @@ $("#cYes").onclick = async () => {
     if(error){ $("#cmsg").textContent = "Impossible de dépublier : " + (error.message || "erreur inconnue"); return; }
   }
   tests = tests.filter(x => x.id !== delId);
-  save(); renderList();
+  try{ await deleteDraft(delId); }catch(e){ $("#cmsg").textContent = "Impossible de supprimer le brouillon : " + (e.message || "erreur inconnue"); return; }
+  renderList();
   $("#cov").classList.remove("show");
 };
 
@@ -568,7 +596,7 @@ $("#annBtn").onclick = () => {
   else ask(editId ? "Annuler toutes les modifications de ce test ?" : "Quitter sans enregistrer ce test ?", "Continuer l’édition", "Annuler les modifications", leave);
 };
 
-$("#finBtn").onclick = () => {
+$("#finBtn").onclick = async () => {
   for(let i = 0; i < cur.questions.length; i++){
     const q = cur.questions[i]; let p = "";
     if(!q.text.trim()) p = "écris la question.";
@@ -576,8 +604,10 @@ $("#finBtn").onclick = () => {
     else if(q.type !== "text" && q.choices.some(c => !c.t.trim())) p = "un choix est vide.";
     if(p){ qi = i; renderEd(); $("#msg").textContent = "Question " + (i + 1) + " : " + p; return; }
   }
-  if(editId) tests = tests.map(t => t.id === editId ? cur : t); else tests.push(cur);
-  save(); cur = null; editId = null;
+  const finished = cur;
+  if(editId) tests = tests.map(t => t.id === editId ? finished : t); else tests.push(finished);
+  try{ await save(finished); }catch(e){ $("#msg").textContent = "Impossible d’enregistrer le test dans ton compte : " + (e.message || "erreur inconnue"); return; }
+  cur = null; editId = null;
   renderList(); show("home");
 };
 
@@ -587,11 +617,15 @@ renderList();
 (async () => {
   if(!window.api || !sb) return;
   try{
-    const { data } = await sb.auth.getSession();
-    if(!data.session){ window.api.logout(); return; }
+    const { data, error } = await sb.auth.getSession();
+    if(error || !data.session){ window.api.logout(); return; }
+    currentUserId = data.session.user.id;
     $("#userMail").textContent = data.session.user.email || "";
     $("#userBar").style.display = "flex";
-  } catch(e){ window.api.logout(); }
+    await loadUserTests();
+  } catch(e){
+    $("#list").innerHTML = '<p class="empty">Impossible de charger tes tests : ' + esc(e.message || "erreur inconnue") + '</p>';
+  }
 })();
 $("#logoutBtn").onclick = async () => {
   try{ await sb.auth.signOut({ scope: "local" }); }catch(e){}
